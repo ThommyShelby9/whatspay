@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+// Par celui-ci:
+use Illuminate\Support\Facades\Mail;
+use App\Mail\Email;
 
 class AuthService
 {
@@ -179,15 +182,14 @@ if ($userData['profil'] === Util::TYPES_ROLE["DIFFUSEUR"]) {
 
             // Envoyer email avec code de vérification
          
-            $this->sendDataToQueue([
-                'recipient' => $userData['email'],
-                'type' => 'registration',
-                'subject' => 'Inscription sur WhatsPAY - Code de vérification',
-                'lastname' => $userData['lastname'],
-                'firstname' => $userData['firstname'],
-                'verification_code' => $verificationCode,
-                'url' => config('app.url'),
-            ], Util::MAILSENDER_QUEUE);
+Mail::to($userData['email'])->send(new Email([
+    'type' => 'registration',
+    'subject' => 'Inscription sur WhatsPAY - Code de vérification',
+    'lastname' => $userData['lastname'],
+    'firstname' => $userData['firstname'],
+    'verification_code' => $verificationCode,
+    'url' => config('app.url'),
+]));
 
 
             $result['success'] = true;

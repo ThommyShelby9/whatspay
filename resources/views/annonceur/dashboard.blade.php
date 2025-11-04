@@ -18,9 +18,13 @@
             <p class="text-muted">Bienvenue, {{ $viewData['userfirstname'] }} {{ $viewData['userlastname'] }} - Découvrez votre espace annonceur</p>
           </div>
           <div class="col-auto">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
-              <i class="fa fa-plus me-2"></i>Nouvelle Campagne
+            <a href="{{ route('announcer.campaigns.create') }}">
+              <button class="btn btn-primary" ">
+              <i class="fa fa-plus me-2"></i>Nouvelle Campagne  
             </button>
+            </a>
+            
+                        
           </div>
         </div>
       </div>

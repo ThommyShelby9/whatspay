@@ -321,7 +321,7 @@ class AuthController extends Controller
         $result = $this->authService->verifyAccount($request->email, $request->verification_code);
 
         if ($result['success']) {
-            $url = URL::route('auth.login', [], true, config('app.url'));
+            $url = URL::route('admin.login', [], true, config('app.url'));
             return redirect()->to($url)->with([
                 'message' => 'Votre compte a été vérifié avec succès.',
                 'type' => 'success'
