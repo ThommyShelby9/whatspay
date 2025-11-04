@@ -1,14 +1,10 @@
 FROM composer:latest AS composer
 
 WORKDIR /app
-
-# Install required PHP extensions in composer stage
-RUN apk add --no-cache $PHPIZE_DEPS libpng-dev libjpeg-turbo-dev libzip-dev freetype-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install sockets gd
-
 COPY composer.json composer.lock ./
-RUN composer install --optimize-autoloader --no-dev --no-scripts
+
+# Skip platform requirements instead of installing extensions in composer stage
+RUN composer install --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd
 
 FROM php:8.1-fpm
 
