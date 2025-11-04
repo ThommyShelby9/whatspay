@@ -1,4 +1,6 @@
 [phases.setup]
+# Désactiver apt-get complètement
+aptPkgs = []
 nixPkgs = [
   "curl", 
   "wget", 
@@ -6,15 +8,14 @@ nixPkgs = [
   "nodejs_20",
   "php81",
   "php81Extensions.bcmath",
-  "php81Extensions.curl",
+  "php81Extensions.curl", 
   "php81Extensions.fileinfo",
   "php81Extensions.gd",
   "php81Extensions.intl",
-  # Supprimez php81Extensions.json
   "php81Extensions.mbstring",
   "php81Extensions.opcache",
   "php81Extensions.pdo_mysql",
-  "php81Extensions.pdo_pgsql",
+  "php81Extensions.pdo_pgsql", 
   "php81Extensions.soap",
   "php81Extensions.xml",
   "php81Extensions.zip",
