@@ -5,7 +5,6 @@ nixPkgs = [
   "python311Packages.supervisor",
   "nodejs_20",
   "php81",
-  "php81-fpm",  # Utilisez ce format au lieu de php81Extensions.fpm
   "php81Extensions.bcmath",
   "php81Extensions.curl",
   "php81Extensions.fileinfo",
