@@ -1,0 +1,139 @@
+services:
+  
+    redis:
+      container_name: ${DOCKER_INSTANCE}davRedisServer
+      image: redis:latest
+      restart: unless-stopped
+      tty: true
+      ports:
+        - ${DOCKER_INSTANCE_REDIS_PORT}:6379
+      networks:
+        - davNet
+      volumes:
+        - '${DOCKER_DATA_ROOT_DIRECTORY}/redis:/bitnami/redis/data'
+      environment:
+        REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD}
+  
+    ratchet-php:
+      container_name: ${DOCKER_INSTANCE}davWebSocketServer
+      build: .
+      ports:
+        - ${DOCKER_INSTANCE_WEBSOCKET_PORT}:8080
+      networks:
+        - davNet
+      depends_on:
+        - redis
+
+    rabbitmq:
+        hostname: ${DOCKER_INSTANCE}davRabbitMqServer
+        build:
+            context: .
+        image: rabbitmq:3.13.7-management
+        container_name: ${DOCKER_INSTANCE}davRabbitMqServer
+        environment:
+            "RABBITMQ_ERLANG_COOKIE": ${DOCKER_RABBITMQ_ERLANG_COOKIE}
+            "RABBITMQ_DEFAULT_USER": ${DOCKER_RABBITMQ_DEFAULT_USER}
+            "RABBITMQ_DEFAULT_PASS": ${DOCKER_RABBITMQ_DEFAULT_PASS}
+        ports:
+            - ${DOCKER_INSTANCE_RABBITMQ_PORT1}:5672
+            - ${DOCKER_INSTANCE_RABBITMQ_PORT2}:15672
+        volumes:
+            - '${DOCKER_DATA_ROOT_DIRECTORY}/rabbitmq:/var/lib/rabbitmq/mnesia'
+            - '${DOCKER_DATA_ROOT_DIRECTORY}/rabbitmq_logs:/var/log/rabbitmq'
+        restart: always
+        networks:
+            - davNet
+
+        # This is the configuration for our PostgreSQL database container
+        # Note the `postgres` name is important, in out Node app when we refer
+        # to  `host: "postgres"` that value is mapped on the network to the
+        # address of this container. .....
+    postgres:
+        container_name: ${DOCKER_INSTANCE}davDbServer
+        build:
+            context: .
+        image: postgres:17
+        command: postgres -c 'max_connections=500'
+        restart: always
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U ${DOCKER_POSTGRES_USER} && psql -U ${DOCKER_POSTGRES_USER} -d ${DOCKER_POSTGRES_DB} -c 'SELECT 1'" ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        environment:
+            POSTGRES_DB: ${DOCKER_POSTGRES_DB}
+            POSTGRES_USER: ${DOCKER_POSTGRES_USER}
+            POSTGRES_PASSWORD: ${DOCKER_POSTGRES_PASSWORD}
+            PGDATA: /data/postgres
+        ports:
+            - ${DOCKER_INSTANCE_POSTGRES_PORT}:5432
+        volumes:
+            - './docker/initdb.sql:/docker-entrypoint-initdb.d/initdb.sql'
+            - '${DOCKER_DATA_ROOT_DIRECTORY}/postgres:/data/postgres'
+        networks:
+            - davNet
+
+    pgadmin:
+        container_name: ${DOCKER_INSTANCE}davDbServerAdmin
+        build:
+            context: .
+        image: dpage/pgadmin4
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${DOCKER_PGADMIN_DEFAULT_EMAIL}
+            PGADMIN_DEFAULT_PASSWORD: ${DOCKER_PGADMIN_DEFAULT_PASSWORD}
+        ports:
+            - ${DOCKER_INSTANCE_PGADMIN_PORT}:80
+        volumes:
+            - '${DOCKER_DATA_ROOT_DIRECTORY}/pgadmin:/var/lib/pgadmin'
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - davNet
+
+    web:
+        platform: linux/amd64
+        container_name: ${DOCKER_INSTANCE}davWebServer
+        build:
+            context: .
+        image: nginx:latest
+        ports:
+          - ${DOCKER_INSTANCE_WEB_PORT}:80
+        #environment:
+        #    "NGINX_HOST": ${DOCKER_INSTANCE}davBackend
+        restart: always
+        volumes:
+          - ./docker/nginx/:/etc/nginx/conf.d:cached
+          - .:/var/www/html:cached
+          - '${DOCKER_LOG_ROOT_DIRECTORY}/nginx:/var/log/nginx'
+        #command: /bin/sh -c "envsubst < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+        networks:
+            - davNet
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    app:
+        container_name: ${DOCKER_INSTANCE}davBackend
+        build:
+          context: .
+        volumes:
+          - .:/var/www/html:cached
+          - ./docker/www.conf:/usr/local/etc/php-fpm.d/www.conf
+          - ./docker/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+          - ./docker/supervisor:/etc/supervisor/conf.d
+          - '${DOCKER_LOG_ROOT_DIRECTORY}/supervisor:/var/www/html/storage/supervisor'
+          - '${DOCKER_LOG_ROOT_DIRECTORY}/request_logs:/var/www/html/storage/request_logs'
+          - '${DOCKER_LOG_ROOT_DIRECTORY}/persistent:/var/www/html/storage/persistent'
+        command: bash -c "chmod -R 777 /var/www/html/ && cd /var/www/html/ && php composer.phar install && php artisan migrate --seed && php artisan config:clear && php artisan cache:clear && php artisan view:clear && cd /var/www/html/websocket && php composer.phar install && service cron start && /usr/bin/supervisord -c '/etc/supervisor/conf.d/rabbitmq_consumer.conf'"
+        networks:
+            - davNet
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+networks:
+    davNet:
+        driver: bridge
+        name: ${DOCKER_INSTANCE}davNet
+
