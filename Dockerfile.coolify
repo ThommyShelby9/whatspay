@@ -1,0 +1,24 @@
+FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+
+WORKDIR /app/
+
+# Copie les fichiers de configuration Nix
+COPY .nixpacks/nixpkgs-e24b4c09e963677b1beea49d411cd315a024ad3a.nix .nixpacks/nixpkgs-e24b4c09e963677b1beea49d411cd315a024ad3a.nix
+
+# Installation des paquets Nix (inclut déjà curl et wget)
+RUN nix-env -if .nixpacks/nixpkgs-e24b4c09e963677b1beea49d411cd315a024ad3a.nix && nix-collect-garbage -d
+
+# Copie des assets
+COPY .nixpacks/assets /assets/
+
+# Copie de l'application
+COPY . .
+
+# Installation des dépendances
+RUN composer install --no-interaction --optimize-autoloader --no-dev
+
+# Autorisations et configuration finale
+RUN chmod +x /assets/start.sh
+
+# Commande de démarrage
+CMD ["/assets/start.sh"]
