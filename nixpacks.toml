@@ -10,7 +10,7 @@ nixPkgs = [
   "php81Extensions.fileinfo",
   "php81Extensions.gd",
   "php81Extensions.intl",
-  "php81Extensions.json",
+  # Supprimez php81Extensions.json
   "php81Extensions.mbstring",
   "php81Extensions.opcache",
   "php81Extensions.pdo_mysql",
