@@ -3,10 +3,10 @@ FROM composer:latest AS composer
 WORKDIR /app
 COPY composer.json composer.lock ./
 
-# Skip platform requirements instead of installing extensions in composer stage
+# Skip platform requirements during build
 RUN composer install --optimize-autoloader --no-dev --no-scripts --ignore-platform-req=ext-sockets --ignore-platform-req=ext-gd
 
-FROM php:8.1-fpm
+FROM php:8.3-fpm
 
 WORKDIR /var/www/html
 
