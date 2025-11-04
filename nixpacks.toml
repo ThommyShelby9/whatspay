@@ -1,13 +1,36 @@
 [phases.setup]
-nixPkgs = ["curl", "wget", "python311Packages.supervisor", "..."]
+nixPkgs = [
+  "curl", 
+  "wget", 
+  "python311Packages.supervisor",
+  "nodejs_20",
+  "php81",
+  "php81Packages.composer",
+  "php81Extensions.pdo_mysql",
+  "php81Extensions.pdo_pgsql",
+  "php81Extensions.bcmath",
+  "php81Extensions.gd",
+  "php81Extensions.intl",
+  "php81Extensions.mbstring",
+  "php81Extensions.opcache",
+  "php81Extensions.zip",
+  "php81Extensions.soap",
+  "php81Extensions.fpm",
+  "php81Extensions.xml",
+  "php81Extensions.curl",
+  "php81Extensions.json",
+  "php81Extensions.fileinfo",
+  "nginx"
+]
 
 [phases.build]
 cmds = [
-    "mkdir -p /etc/supervisor/conf.d/",
-    "cp /assets/worker-*.conf /etc/supervisor/conf.d/",
-    "cp /assets/supervisord.conf /etc/supervisord.conf",
-    "chmod +x /assets/start.sh",
-    "..."
+  "mkdir -p /etc/supervisor/conf.d/",
+  "cp /assets/worker-*.conf /etc/supervisor/conf.d/",
+  "cp /assets/supervisord.conf /etc/supervisord.conf",
+  "chmod +x /assets/start.sh",
+  "composer install --optimize-autoloader --no-dev",
+  "php artisan optimize"
 ]
 
 [start]
