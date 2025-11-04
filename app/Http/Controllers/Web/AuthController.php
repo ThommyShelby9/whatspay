@@ -521,7 +521,7 @@ class AuthController extends Controller
         }
 
         $this->setViewData($request, $viewData);
-        return view('auth.registration_home', [
+        return view('auth.registration', [
             'alert' => $alert, 
             'viewData' => $viewData, 
             'version' => gmdate("YmdHis"),
