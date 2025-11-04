@@ -1,3 +1,9 @@
+FROM composer:latest AS composer
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --optimize-autoloader --no-dev --no-scripts
+
 FROM php:8.1-fpm
 
 WORKDIR /var/www/html
@@ -30,9 +36,6 @@ RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring zip exif pcntl
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 RUN docker-php-ext-install gd
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
 # Configuration files
 COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
@@ -41,9 +44,7 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy application
 COPY . .
-
-# Install dependencies
-RUN composer install --optimize-autoloader --no-dev
+COPY --from=composer /app/vendor/ /var/www/html/vendor/
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
