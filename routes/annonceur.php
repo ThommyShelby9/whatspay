@@ -41,8 +41,9 @@ Route::middleware(['auth'])->prefix('admin/announcer')->group(function () {
         ->name('announcer.reports.index');
     
     // Wallet
-    Route::get('/wallet', [WalletController::class, 'index'])
-        ->name('announcer.wallet.index');
+    // Existing routes...
+    Route::get('wallet', [WalletController::class, 'index'])->name('announcer.wallet');
+    Route::post('wallet/add-funds', [WalletController::class, 'addFunds'])->name('announcer.wallet.add-funds');
     
     // Messages
     Route::get('/messages', [MessageController::class, 'index'])

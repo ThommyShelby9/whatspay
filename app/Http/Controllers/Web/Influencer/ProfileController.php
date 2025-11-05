@@ -8,6 +8,7 @@ use App\Services\UserService;
 use App\Services\CategoryService;
 use App\Traits\Utils;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -24,43 +25,59 @@ class ProfileController extends Controller
         $this->categoryService = $categoryService;
     }
     
-public function index(Request $request)
-{
-    $viewData = [];
-    $alert = [];
-    $this->setAlert($request, $alert);
-    
-    $userId = $request->session()->get('userid');
-    
-    // Récupérer l'objet utilisateur complet
-    $user = $this->userService->getUserById($userId);
-    
-    // Si l'utilisateur est trouvé
-    if ($user) {
-        // Stocker l'objet utilisateur complet
-        $viewData["userObject"] = $user; // Nous utilisons une clé différente pour éviter les conflits
-    } else {
-        // Si l'utilisateur n'est pas trouvé, rediriger vers la page de connexion
-        return redirect()->route('admin.login')
-            ->with('type', 'danger')
-            ->with('message', 'Utilisateur non trouvé. Veuillez vous reconnecter.');
+    public function index(Request $request)
+    {
+        $viewData = [];
+        $alert = [];
+        $this->setAlert($request, $alert);
+        
+        $userId = $request->session()->get('userid');
+        
+        // Récupérer l'objet utilisateur complet avec toutes les relations
+        $user = $this->userService->getUserById($userId);
+        
+        // Si l'utilisateur est trouvé
+        if ($user) {
+            // Stocker l'objet utilisateur complet
+            $viewData["userObject"] = $user;
+            
+            // Récupérer la liste des pays directement de la base de données
+            $viewData["countries"] = DB::table('countries')
+                ->select('id', 'name')
+                ->where('enabled', true)
+                ->orderBy('name')
+                ->get();
+                
+            // Récupérer la liste des localités directement de la base de données
+            // Correction: utiliser "active" au lieu de "enabled" pour les localités
+            $viewData["localities"] = DB::table('localities')
+                ->select('id', 'name')
+                ->where('active', true)
+                ->orderBy('name')
+                ->get();
+                
+        } else {
+            // Si l'utilisateur n'est pas trouvé, rediriger vers la page de connexion
+            return redirect()->route('admin.login')
+                ->with('type', 'danger')
+                ->with('message', 'Utilisateur non trouvé. Veuillez vous reconnecter.');
+        }
+        
+        $viewData["categories"] = $this->categoryService->getAllCategories();
+        $viewData["userCategories"] = $this->userService->getUserCategories($userId);
+        $viewData["assignmentStats"] = $this->userService->getAssignmentStats($userId);
+        
+        $this->setViewData($request, $viewData);
+        
+        return view('influencer.profile.index', [
+            'alert' => $alert,
+            'viewData' => $viewData,
+            'version' => gmdate("YmdHis"),
+            'title' => 'WhatsPAY | Mon Profil',
+            'pagetilte' => 'Mon Profil',
+            'pagecardtilte' => 'Informations personnelles'
+        ]);
     }
-    
-    $viewData["categories"] = $this->categoryService->getAllCategories();
-    $viewData["userCategories"] = $this->userService->getUserCategories($userId);
-    $viewData["assignmentStats"] = $this->userService->getAssignmentStats($userId);
-    
-    $this->setViewData($request, $viewData);
-    
-    return view('influencer.profile.index', [
-        'alert' => $alert,
-        'viewData' => $viewData,
-        'version' => gmdate("YmdHis"),
-        'title' => 'WhatsPAY | Mon Profil',
-        'pagetilte' => 'Mon Profil',
-        'pagecardtilte' => 'Informations personnelles'
-    ]);
-}
     
     public function update(Request $request)
     {
@@ -74,7 +91,10 @@ public function index(Request $request)
             'locality_id' => 'nullable|string',
             'vuesmoyen' => 'required|numeric|min:0',
             'categories' => 'nullable|array',
-            'contentTypes' => 'nullable|array',
+            'phone' => 'nullable|string',
+            'instagram' => 'nullable|string',
+            'tiktok' => 'nullable|string',
+            'youtube' => 'nullable|string',
         ]);
         
         $userData = [
@@ -83,13 +103,12 @@ public function index(Request $request)
             'country_id' => $request->input('country_id'),
             'locality_id' => $request->input('locality_id'),
             'vuesmoyen' => $request->input('vuesmoyen'),
+            'phone' => $request->input('phone'),
             'categories' => $request->input('categories'),
-            'contentTypes' => $request->input('contentTypes'),
+            'instagram' => $request->input('instagram'),
+            'tiktok' => $request->input('tiktok'),
+            'youtube' => $request->input('youtube'),
         ];
-        
-        if (!empty($request->input('password'))) {
-            $userData['password'] = $request->input('password');
-        }
         
         $result = $this->userService->updateUser($userId, $userData);
         

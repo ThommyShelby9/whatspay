@@ -56,4 +56,10 @@ Route::middleware(['auth'])->prefix('admin/influencer')->group(function () {
     // Configuration WhatsApp
     Route::get('/agent/whatsapp', [WhatsAppController::class, 'index'])
         ->name('influencer.whatsapp');
+
+        Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('influencer.whatsapp');
+    Route::post('whatsapp/add', [WhatsAppController::class, 'addPhone'])->name('influencer.whatsapp.add');
+    Route::post('whatsapp/verify', [WhatsAppController::class, 'verifyPhone'])->name('influencer.whatsapp.verify');
+    Route::post('whatsapp/resend', [WhatsAppController::class, 'resendCode'])->name('influencer.whatsapp.resend');
+    Route::delete('whatsapp/delete/{id}', [WhatsAppController::class, 'deletePhone'])->name('influencer.whatsapp.delete');
 });

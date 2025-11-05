@@ -36,7 +36,13 @@
             </div>
             <div class="flex-grow-1 ms-4">
               <h3 class="fw-bold">Solde actuel</h3>
-              <h1 class="mb-3 text-primary">500 000 F</h1>
+              <h1 class="mb-3 text-primary">
+                @if(isset($viewData['balance']))
+                  {{ number_format($viewData['balance'], 0, ',', ' ') }} F
+                @else
+                  0 F
+                @endif
+              </h1>
               <div class="btn-group">
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFundsModal">
                   <i class="fa fa-plus me-1"></i> Ajouter des fonds
@@ -57,14 +63,22 @@
           <h5 class="card-title text-success mb-0">Plan actuel</h5>
         </div>
         <div class="card-body">
-          <h4 class="mb-1">Premium Business</h4>
-          <p class="text-muted">Valide jusqu'au 31/12/2025</p>
-          <hr>
-          <ul class="list-unstyled mb-3">
-            <li class="mb-2"><i class="fa fa-check-circle text-success me-2"></i> Campagnes illimitées</li>
-            <li class="mb-2"><i class="fa fa-check-circle text-success me-2"></i> Support prioritaire</li>
-            <li class="mb-2"><i class="fa fa-check-circle text-success me-2"></i> Analytics avancés</li>
-          </ul>
+          @if(isset($viewData['currentPlan']))
+            <h4 class="mb-1">{{ $viewData['currentPlan']->name ?? 'Aucun plan actif' }}</h4>
+            @if(isset($viewData['currentPlan']->valid_until))
+              <p class="text-muted">Valide jusqu'au {{ date('d/m/Y', strtotime($viewData['currentPlan']->valid_until)) }}</p>
+            @endif
+            <hr>
+            <ul class="list-unstyled mb-3">
+              @foreach($viewData['currentPlan']->features ?? [] as $feature)
+                <li class="mb-2"><i class="fa fa-check-circle text-success me-2"></i> {{ $feature }}</li>
+              @endforeach
+            </ul>
+          @else
+            <h4 class="mb-1">Aucun plan actif</h4>
+            <p class="text-muted">Choisissez un plan pour accéder à plus de fonctionnalités</p>
+            <hr>
+          @endif
           <button type="button" class="btn btn-outline-success btn-sm w-100">
             Voir les autres plans
           </button>
@@ -81,46 +95,54 @@
           <h5 class="card-title mb-0">Transactions récentes</h5>
         </div>
         <div class="card-body">
-          <div class="table-responsive">
-            <table class="table" id="transactions-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Type</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                  <th>Reçu</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>10/10/2025</td>
-                  <td>Paiement campagne "Promo Automne"</td>
-                  <td>Débit</td>
-                  <td class="text-danger">-75 000 F</td>
-                  <td><span class="badge bg-success">Complété</span></td>
-                  <td><a href="#" class="btn btn-sm btn-light"><i class="fa fa-download"></i></a></td>
-                </tr>
-                <tr>
-                  <td>05/10/2025</td>
-                  <td>Rechargement par carte bancaire</td>
-                  <td>Crédit</td>
-                  <td class="text-success">+200 000 F</td>
-                  <td><span class="badge bg-success">Complété</span></td>
-                  <td><a href="#" class="btn btn-sm btn-light"><i class="fa fa-download"></i></a></td>
-                </tr>
-                <tr>
-                  <td>28/09/2025</td>
-                  <td>Paiement campagne "Back to School"</td>
-                  <td>Débit</td>
-                  <td class="text-danger">-120 000 F</td>
-                  <td><span class="badge bg-success">Complété</span></td>
-                  <td><a href="#" class="btn btn-sm btn-light"><i class="fa fa-download"></i></a></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          @if(isset($viewData['transactions']) && count($viewData['transactions']) > 0)
+            <div class="table-responsive">
+              <table class="table" id="transactions-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Reçu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($viewData['transactions'] as $transaction)
+                    <tr>
+                      <td>{{ date('d/m/Y', strtotime($transaction->created_at)) }}</td>
+                      <td>{{ $transaction->description }}</td>
+                      <td>{{ $transaction->type }}</td>
+                      <td class="{{ $transaction->type == 'Crédit' ? 'text-success' : 'text-danger' }}">
+                        {{ $transaction->type == 'Crédit' ? '+' : '-' }}{{ number_format($transaction->amount, 0, ',', ' ') }} F
+                      </td>
+                      <td>
+                        <span class="badge bg-{{ $transaction->status == 'COMPLETED' ? 'success' : ($transaction->status == 'PENDING' ? 'warning' : 'danger') }}">
+                          {{ $transaction->status == 'COMPLETED' ? 'Complété' : ($transaction->status == 'PENDING' ? 'En attente' : 'Échoué') }}
+                        </span>
+                      </td>
+                      <td>
+                        @if($transaction->receipt_url)
+                          <a href="{{ $transaction->receipt_url }}" class="btn btn-sm btn-light" target="_blank"><i class="fa fa-download"></i></a>
+                        @else
+                          <button class="btn btn-sm btn-light" disabled><i class="fa fa-download"></i></button>
+                        @endif
+                      </td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          @else
+            <div class="text-center py-4">
+              <div class="avatar-lg mx-auto mb-3">
+                <i class="fa fa-receipt fa-3x text-muted"></i>
+              </div>
+              <h5>Aucune transaction</h5>
+              <p class="text-muted mb-0">Vous n'avez pas encore effectué de transaction.</p>
+            </div>
+          @endif
         </div>
       </div>
     </div>
@@ -136,27 +158,34 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form id="addFundsForm">
+        <form id="addFundsForm" method="post" action="{{ route('announcer.wallet.add-funds') }}">
+          @csrf
+          
           <div class="mb-3">
             <label class="form-label">Méthode de paiement</label>
-            <select class="form-select" required>
+            <select class="form-select" name="payment_method" required>
               <option value="">Sélectionner une méthode</option>
-              <option value="card">Carte bancaire</option>
-              <option value="mobile_money">Mobile Money</option>
-              <option value="bank">Virement bancaire</option>
+              @foreach($viewData['paymentMethods'] ?? [] as $method)
+                <option value="{{ $method->id }}">{{ $method->name }}</option>
+              @endforeach
+              @if(!isset($viewData['paymentMethods']) || count($viewData['paymentMethods']) === 0)
+                <option value="card">Carte bancaire</option>
+                <option value="mobile_money">Mobile Money</option>
+                <option value="bank">Virement bancaire</option>
+              @endif
             </select>
           </div>
           
           <div class="mb-3">
             <label class="form-label">Montant (F)</label>
-            <input type="number" class="form-control" min="5000" step="1000" required>
+            <input type="number" class="form-control" name="amount" min="5000" step="1000" required>
             <div class="form-text">Montant minimum: 5 000 F</div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary">Procéder au paiement</button>
+        <button type="submit" form="addFundsForm" class="btn btn-primary">Procéder au paiement</button>
       </div>
     </div>
   </div>

@@ -29,12 +29,8 @@
       <div class="card">
         <div class="card-body text-center">
           <div class="mb-4">
-            <img src="{{ asset('images/default-avatar.png') }}" alt="Photo de profil" class="rounded-circle avatar-xl">
             <div class="mt-3">
-              <button type="button" class="btn btn-light btn-sm" id="changeProfilePicture">
-                <i class="fa fa-camera me-1"></i>Changer la photo
-              </button>
-              <input type="file" id="profilePictureInput" class="d-none" accept="image/*">
+             
             </div>
           </div>
           
@@ -50,10 +46,7 @@
               <h5>{{ $viewData["assignmentStats"]["completed_count"] ?? 0 }}</h5>
               <p class="text-muted mb-0">Campagnes</p>
             </div>
-            <div class="text-center px-3 border-start">
-              <h5>{{ $viewData["userObject"]->rating ?? '4.8' }} <i class="fa fa-star text-warning"></i></h5>
-              <p class="text-muted mb-0">Évaluation</p>
-            </div>
+            
           </div>
         </div>
       </div>
@@ -64,28 +57,28 @@
         </div>
         <div class="card-body">
           <ul class="list-unstyled mb-0">
-            <li class="py-2 border-bottom">
-              <div class="d-flex">
-                <div class="flex-shrink-0">
-                  <i class="fa fa-globe text-primary me-2"></i>
-                </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-0">Pays</p>
-                  <h6 class="mb-0">{{ $viewData["userObject"]->country ?? 'Non spécifié' }}</h6>
-                </div>
-              </div>
-            </li>
-            <li class="py-2 border-bottom">
-              <div class="d-flex">
-                <div class="flex-shrink-0">
-                  <i class="fa fa-map-marker-alt text-primary me-2"></i>
-                </div>
-                <div class="flex-grow-1">
-                  <p class="text-muted mb-0">Localité</p>
-                  <h6 class="mb-0">{{ $viewData["userObject"]->locality ?? 'Non spécifié' }}</h6>
-                </div>
-              </div>
-            </li>
+<li class="py-2 border-bottom">
+  <div class="d-flex">
+    <div class="flex-shrink-0">
+      <i class="fa fa-globe text-primary me-2"></i>
+    </div>
+    <div class="flex-grow-1">
+      <p class="text-muted mb-0">Pays</p>
+      <h6 class="mb-0">{{ $viewData["userObject"]->country ?? 'Non spécifié' }}</h6>
+    </div>
+  </div>
+</li>
+<li class="py-2 border-bottom">
+  <div class="d-flex">
+    <div class="flex-shrink-0">
+      <i class="fa fa-map-marker-alt text-primary me-2"></i>
+    </div>
+    <div class="flex-grow-1">
+      <p class="text-muted mb-0">Localité</p>
+      <h6 class="mb-0">{{ $viewData["userObject"]->locality ?? 'Non spécifié' }}</h6>
+    </div>
+  </div>
+</li>
             <li class="py-2 border-bottom">
               <div class="d-flex">
                 <div class="flex-shrink-0">
@@ -150,31 +143,35 @@
               </div>
             </div>
             
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label class="form-label">Pays</label>
-                  <select class="form-select" name="country_id">
-                    <option value="">Sélectionner un pays</option>
-                    <option value="BJ" {{ ($viewData['userObject']->country_id ?? '') == 'BJ' ? 'selected' : '' }}>Bénin</option>
-                    <option value="CI" {{ ($viewData['userObject']->country_id ?? '') == 'CI' ? 'selected' : '' }}>Côte d'Ivoire</option>
-                    <option value="SN" {{ ($viewData['userObject']->country_id ?? '') == 'SN' ? 'selected' : '' }}>Sénégal</option>
-                    <option value="TG" {{ ($viewData['userObject']->country_id ?? '') == 'TG' ? 'selected' : '' }}>Togo</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label class="form-label">Localité</label>
-                  <select class="form-select" name="locality_id">
-                    <option value="">Sélectionner une localité</option>
-                    <option value="COT" {{ ($viewData['userObject']->locality_id ?? '') == 'COT' ? 'selected' : '' }}>Cotonou</option>
-                    <option value="PNV" {{ ($viewData['userObject']->locality_id ?? '') == 'PNV' ? 'selected' : '' }}>Porto-Novo</option>
-                    <option value="ABM" {{ ($viewData['userObject']->locality_id ?? '') == 'ABM' ? 'selected' : '' }}>Abomey</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+<!-- Modifier ces sections dans le formulaire pour utiliser les données réelles -->
+<div class="row mb-3">
+  <div class="col-md-6">
+    <div class="form-group mb-3">
+      <label class="form-label">Pays</label>
+      <select class="form-select" name="country_id">
+        <option value="">Sélectionner un pays</option>
+        @foreach($viewData["countries"] ?? [] as $country)
+          <option value="{{ $country->id }}" {{ ($viewData['userObject']->country_id ?? '') == $country->id ? 'selected' : '' }}>
+            {{ $country->name }}
+          </option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="form-group mb-3">
+      <label class="form-label">Localité</label>
+      <select class="form-select" name="locality_id">
+        <option value="">Sélectionner une localité</option>
+        @foreach($viewData["localities"] ?? [] as $locality)
+          <option value="{{ $locality->id }}" {{ ($viewData['userObject']->locality_id ?? '') == $locality->id ? 'selected' : '' }}>
+            {{ $locality->name }}
+          </option>
+        @endforeach
+      </select>
+    </div>
+  </div>
+</div>
             
             <div class="row mb-3">
               <div class="col-md-6">
@@ -233,17 +230,6 @@
               </div>
             </div>
             
-            <div class="row mb-4">
-              <div class="col-md-12">
-                <div class="form-group">
-                  <label class="form-label">Présentation (Bio)</label>
-                  <textarea class="form-control" name="bio" rows="4">{{ $viewData['user']->bio ?? '' }}</textarea>
-                  <div class="form-text">
-                    Décrivez votre audience et votre style de contenu (max 500 caractères).
-                  </div>
-                </div>
-              </div>
-            </div>
             
             <div class="row mb-4">
               <div class="col-md-12">

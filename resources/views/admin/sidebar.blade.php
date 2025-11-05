@@ -107,7 +107,7 @@
 
 <!-- Portefeuille -->
 <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
-  <a class="sidebar-link sidebar-title {{ request()->routeIs('announcer.wallet.*') ? 'active' : '' }}" href="{{ route('announcer.wallet.index') }}">
+  <a class="sidebar-link sidebar-title {{ request()->routeIs('announcer.wallet.*') ? 'active' : '' }}" href="{{ route('announcer.wallet') }}">
     <svg class="stroke-icon">
       <use href="/design/admin/assets/svg/icon-sprite.svg#stroke-wallet"></use>
     </svg>

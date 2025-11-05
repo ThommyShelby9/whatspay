@@ -73,12 +73,7 @@
               </span>
             </div>
           </div>
-          <p class="text-muted mt-2 mb-0">
-            <span class="text-success me-2">
-              <i class="fa fa-arrow-up me-1"></i>8.2%
-            </span>
-            <span class="text-nowrap">Par rapport au mois dernier</span>
-          </p>
+          
         </div>
       </div>
     </div>
@@ -97,12 +92,7 @@
               </span>
             </div>
           </div>
-          <p class="text-muted mt-2 mb-0">
-            <span class="text-success me-2">
-              <i class="fa fa-arrow-up me-1"></i>16.4%
-            </span>
-            <span class="text-nowrap">Par rapport au mois dernier</span>
-          </p>
+          
         </div>
       </div>
     </div>
@@ -126,39 +116,13 @@
               </span>
             </div>
           </div>
-          <p class="text-muted mt-2 mb-0">
-            <span class="text-success me-2">
-              <i class="fa fa-arrow-up me-1"></i>4.6%
-            </span>
-            <span class="text-nowrap">Par rapport au mois dernier</span>
-          </p>
+         
         </div>
       </div>
     </div>
     
-    <div class="col-xl-3 col-md-6">
-      <div class="card mini-stats">
-        <div class="card-body">
-          <div class="d-flex">
-            <div class="flex-grow-1">
-              <h6 class="mb-2 text-uppercase text-muted">Taux de satisfaction</h6>
-              <h4 class="mb-0">{{ $viewData["assignmentStats"]["satisfaction_rate"] ?? 95 }}%</h4>
-            </div>
-            <div class="avatar-sm rounded-circle bg-warning align-self-center mini-stat-icon">
-              <span class="avatar-title rounded-circle bg-warning">
-                <i class="fa fa-star text-white"></i>
-              </span>
-            </div>
-          </div>
-          <p class="text-muted mt-2 mb-0">
-            <span class="text-success me-2">
-              <i class="fa fa-arrow-up me-1"></i>2.1%
-            </span>
-            <span class="text-nowrap">Par rapport au mois dernier</span>
-          </p>
-        </div>
-      </div>
-    </div>
+
+
   </div>
 
   <!-- Graphiques -->
@@ -215,30 +179,7 @@
                 @php
                   // Exemple de données de performance - à remplacer par les données réelles
                   $performanceData = [
-                    [
-                      'campaign' => 'Promo Été 2025',
-                      'date' => '2025-07-15',
-                      'views' => 5200,
-                      'target' => 5000,
-                      'performance' => 104,
-                      'rating' => 5
-                    ],
-                    [
-                      'campaign' => 'Lancement Produit',
-                      'date' => '2025-06-20',
-                      'views' => 3800,
-                      'target' => 4000,
-                      'performance' => 95,
-                      'rating' => 4
-                    ],
-                    [
-                      'campaign' => 'Offre Spéciale',
-                      'date' => '2025-05-10',
-                      'views' => 6200,
-                      'target' => 5000,
-                      'performance' => 124,
-                      'rating' => 5
-                    ]
+
                   ];
                 @endphp
                 
@@ -348,29 +289,12 @@
     viewsChart.render();
     
     // Category Chart
-    var categoryOptions = {
-      series: [35, 25, 20, 15, 5],
-      chart: {
-        type: 'donut',
-        height: 350,
-      },
-      labels: ['Mode', 'Technologie', 'Alimentation', 'Beauté', 'Autres'],
-      colors: ['#3b5de7', '#45cb85', '#eeb902', '#ff715b', '#8891a1'],
-      legend: {
-        position: 'bottom'
-      },
-      responsive: [{
-        breakpoint: 480,
-        options: {
-          chart: {
-            width: 200
-          },
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }]
-    };
+categoryChart.updateOptions({
+  series: <?php echo json_encode($viewData["categoryChartData"]["values"]); ?>,
+  labels: <?php echo json_encode($viewData["categoryChartData"]["labels"]); ?>
+});
+
+
 
     var categoryChart = new ApexCharts(document.querySelector("#category-chart"), categoryOptions);
     categoryChart.render();
@@ -396,15 +320,15 @@
         data = [65000, 70000, 80000, 75000, 85000, 90000, 95000, 100000, 92000, 88000, 96000, 102000];
       }
       
-      viewsChart.updateOptions({
-        xaxis: {
-          categories: categories
-        },
-        series: [{
-          name: 'Vues',
-          data: data
-        }]
-      });
+viewsChart.updateOptions({
+  series: [{
+    name: 'Vues',
+    data: <?php echo json_encode($viewData["viewsChartData"]["week"]); ?>
+  }],
+  xaxis: {
+    categories: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+  }
+});
     });
     
     // Export buttons

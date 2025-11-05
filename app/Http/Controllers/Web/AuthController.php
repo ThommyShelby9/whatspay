@@ -472,7 +472,7 @@ class AuthController extends Controller
                 return redirect()->to($url)->with($alert);
                 break;
             case "DIFFUSEUR":
-                $url = URL::route('admin.influencer.dashboard', [], true, config('app.url'));
+                $url = URL::route('influencer.dashboard', [], true, config('app.url'));
                 return redirect()->to($url)->with($alert);
                 break;
             default:

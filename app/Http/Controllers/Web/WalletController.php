@@ -4,6 +4,8 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Services\WalletService;
+use App\Services\PaymentService;
 use App\Traits\Utils;
 use Illuminate\Http\Request;
 
@@ -11,14 +13,36 @@ class WalletController extends Controller
 {
     use Utils;
     
+    protected $walletService;
+    protected $paymentService;
+    
+    public function __construct(
+        WalletService $walletService,
+        PaymentService $paymentService
+    ) {
+        $this->walletService = $walletService;
+        $this->paymentService = $paymentService;
+    }
+    
     public function index(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
         
-        // Placeholder for wallet functionality
-        // In the future, this would connect to a payment service
+        $userId = $request->session()->get('userid');
+        
+        // Récupérer le solde du portefeuille
+        $viewData['balance'] = $this->walletService->getBalance($userId);
+        
+        // Récupérer le plan actuel
+        $viewData['currentPlan'] = $this->walletService->getCurrentPlan($userId);
+        
+        // Récupérer les transactions récentes
+        $viewData['transactions'] = $this->walletService->getTransactions($userId);
+        
+        // Récupérer les méthodes de paiement disponibles
+        $viewData['paymentMethods'] = $this->paymentService->getAvailablePaymentMethods();
         
         $this->setViewData($request, $viewData);
         
@@ -30,6 +54,39 @@ class WalletController extends Controller
             'pagetilte' => 'Portefeuille',
             'pagecardtilte' => 'Gérer votre budget et vos paiements'
         ]);
+    }
+    
+    public function addFunds(Request $request)
+    {
+        $userId = $request->session()->get('userid');
+        
+        // Valider les données du formulaire
+        $request->validate([
+            'payment_method' => 'required|string',
+            'amount' => 'required|numeric|min:5000',
+        ]);
+        
+        // Traiter la demande d'ajout de fonds
+        $result = $this->paymentService->initiatePayment(
+            $userId,
+            $request->input('payment_method'),
+            $request->input('amount')
+        );
+        
+        if ($result['success']) {
+            // Si une URL de redirection est fournie pour le paiement
+            if (!empty($result['redirect_url'])) {
+                return redirect()->away($result['redirect_url']);
+            }
+            
+            return redirect()->route('announcer.wallet')
+                ->with('type', 'success')
+                ->with('message', $result['message']);
+        } else {
+            return redirect()->route('announcer.wallet')
+                ->with('type', 'danger')
+                ->with('message', $result['message']);
+        }
     }
     
     private function setAlert(Request &$request, &$alert)

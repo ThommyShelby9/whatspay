@@ -63,27 +63,7 @@
           <h5 class="card-title mb-0">Mes numéros WhatsApp</h5>
         </div>
         <div class="card-body">
-          @php
-            // Données d'exemple - à remplacer par les données réelles
-            $whatsappNumbers = [
-              (object) [
-                'id' => 1,
-                'number' => '+229 97 12 34 56',
-                'status' => 'VERIFIED',
-                'is_primary' => true,
-                'created_at' => '2025-07-15 10:30:00'
-              ],
-              (object) [
-                'id' => 2,
-                'number' => '+229 66 78 90 12',
-                'status' => 'PENDING',
-                'is_primary' => false,
-                'created_at' => '2025-10-20 15:45:00'
-              ]
-            ];
-          @endphp
-          
-          @if(!empty($whatsappNumbers))
+          @if(!empty($viewData["whatsappNumbers"]) && $viewData["whatsappNumbers"]->count() > 0)
             <div class="table-responsive">
               <table class="table">
                 <thead>
@@ -95,19 +75,16 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @foreach($whatsappNumbers as $number)
+                  @foreach($viewData["whatsappNumbers"] as $number)
                   <tr>
                     <td>
                       <div class="d-flex align-items-center">
                         <i class="fab fa-whatsapp text-success me-2"></i>
-                        <span>{{ $number->number }}</span>
-                        @if($number->is_primary)
-                        <span class="badge bg-primary ms-2">Principal</span>
-                        @endif
+                        <span>{{ $number->phone_code ?? '' }} {{ $number->phone }}</span>
                       </div>
                     </td>
                     <td>
-                      @if($number->status == 'VERIFIED')
+                      @if($number->status == 'ACTIVE')
                       <span class="badge bg-success">Vérifié</span>
                       @elseif($number->status == 'PENDING')
                       <span class="badge bg-warning">En attente</span>
@@ -118,21 +95,19 @@
                     <td>{{ date('d/m/Y H:i', strtotime($number->created_at)) }}</td>
                     <td>
                       <div class="btn-group">
-                        @if(!$number->is_primary)
-                        <button type="button" class="btn btn-primary btn-sm set-primary" data-id="{{ $number->id }}">
-                          <i class="fa fa-check-circle"></i> Définir comme principal
-                        </button>
-                        @endif
-                        
                         @if($number->status == 'PENDING')
-                        <button type="button" class="btn btn-success btn-sm verify-number" data-id="{{ $number->id }}" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                        <button type="button" class="btn btn-success btn-sm verify-number me-2" data-id="{{ $number->id }}" data-bs-toggle="modal" data-bs-target="#verifyModal">
                           <i class="fa fa-check"></i> Vérifier
                         </button>
                         @endif
                         
-                        <button type="button" class="btn btn-danger btn-sm delete-number" data-id="{{ $number->id }}" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                          <i class="fa fa-trash"></i>
-                        </button>
+                        <form method="post" action="{{ route('influencer.whatsapp.delete', $number->id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce numéro?');">
+                          @csrf
+                          @method('DELETE')
+                          <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="fa fa-trash"></i>
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>
@@ -198,8 +173,8 @@
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
-                  <h5>Définir un numéro principal</h5>
-                  <p class="text-muted mb-0">Vous pouvez définir un numéro comme principal pour recevoir en priorité les notifications importantes.</p>
+                  <h5>Utiliser WhatsApp pour les campagnes</h5>
+                  <p class="text-muted mb-0">Vous recevrez des notifications sur votre WhatsApp pour les nouvelles campagnes et les mises à jour importantes.</p>
                 </div>
               </div>
             </div>
@@ -211,8 +186,8 @@
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
-                  <h5>Utiliser WhatsApp pour les campagnes</h5>
-                  <p class="text-muted mb-0">Vous recevrez des notifications sur votre WhatsApp pour les nouvelles campagnes et les mises à jour importantes.</p>
+                  <h5>Gérer vos numéros</h5>
+                  <p class="text-muted mb-0">Vous pouvez ajouter plusieurs numéros WhatsApp pour une plus grande flexibilité dans la réception des notifications.</p>
                 </div>
               </div>
             </div>
@@ -232,17 +207,15 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form id="addPhoneForm" method="post" action="/admin/whatsappnumbers/add">
+        <form id="addPhoneForm" method="post" action="{{ route('influencer.whatsapp.add') }}">
           @csrf
           
           <div class="mb-3">
             <label class="form-label">Indicatif</label>
             <select class="form-select" name="country_code" required>
-              <option value="+229" selected>Bénin (+229)</option>
-              <option value="+225">Côte d'Ivoire (+225)</option>
-              <option value="+233">Ghana (+233)</option>
-              <option value="+234">Nigeria (+234)</option>
-              <option value="+228">Togo (+228)</option>
+              @foreach($viewData["countries"] as $country)
+                <option value="{{ $country->phone_code }}">{{ $country->name }} ({{ $country->phone_code }})</option>
+              @endforeach
             </select>
           </div>
           
@@ -278,7 +251,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form id="verifyForm" method="post" action="/admin/verify-phone">
+        <form id="verifyForm" method="post" action="{{ route('influencer.whatsapp.verify') }}">
           @csrf
           
           <input type="hidden" name="phone_id" id="verify-phone-id">
@@ -310,29 +283,6 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
         <button type="submit" class="btn btn-primary" form="verifyForm">Vérifier</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Supprimer un numéro -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Supprimer le numéro</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Êtes-vous sûr de vouloir supprimer ce numéro WhatsApp ?</p>
-        <div class="alert alert-warning">
-          <i class="fa fa-exclamation-triangle me-2"></i>
-          Si vous supprimez ce numéro, vous ne pourrez plus recevoir de notifications sur celui-ci.
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-danger" id="confirmDelete">Supprimer</button>
       </div>
     </div>
   </div>
@@ -411,46 +361,47 @@
       }
     });
     
-    // Set primary number
-    $('.set-primary').click(function() {
-      const phoneId = $(this).data('id');
-      
-      // For demo purposes only
-      alert(`Numéro ${phoneId} défini comme principal`);
-      location.reload();
-    });
-    
-    // Delete number
-    $('.delete-number').click(function() {
-      const phoneId = $(this).data('id');
-      
-      $('#confirmDelete').off('click').on('click', function() {
-        // For demo purposes only
-        alert(`Numéro ${phoneId} supprimé`);
-        $('#deleteModal').modal('hide');
-        location.reload();
-      });
-    });
-    
     // Resend code
     $('#resendCode').click(function() {
+      const phoneId = $('#verify-phone-id').val();
+      
+      // Disable button and reset timer
       $(this).prop('disabled', true);
       
-      // Reset timer
-      let seconds = 59;
-      const timerInterval = setInterval(function() {
-        if (seconds <= 0) {
-          clearInterval(timerInterval);
+      // AJAX call to resend code
+      $.ajax({
+        url: "{{ route('influencer.whatsapp.resend') }}",
+        type: "POST",
+        data: {
+          _token: "{{ csrf_token() }}",
+          phone_id: phoneId
+        },
+        success: function(response) {
+          if (response.success) {
+            alert('Code renvoyé avec succès');
+            
+            // Reset timer
+            let seconds = 59;
+            const timerInterval = setInterval(function() {
+              if (seconds <= 0) {
+                clearInterval(timerInterval);
+                $('#resendCode').prop('disabled', false);
+                $('#timer').text('');
+              } else {
+                seconds--;
+                $('#timer').text(`00:${seconds.toString().padStart(2, '0')}`);
+              }
+            }, 1000);
+          } else {
+            alert('Une erreur est survenue lors du renvoi du code');
+            $('#resendCode').prop('disabled', false);
+          }
+        },
+        error: function() {
+          alert('Une erreur est survenue lors du renvoi du code');
           $('#resendCode').prop('disabled', false);
-          $('#timer').text('');
-        } else {
-          seconds--;
-          $('#timer').text(`00:${seconds.toString().padStart(2, '0')}`);
         }
-      }, 1000);
-      
-      // For demo purposes only
-      alert('Code renvoyé');
+      });
     });
   });
 </script>

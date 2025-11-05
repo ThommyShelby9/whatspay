@@ -7,7 +7,6 @@
 
     <div class="nav-right col-xl-8 col-lg-12 col-auto pull-right right-header p-0">
       <ul class="nav-menus">
-        <!-- @ include ('admin.search') -->
         <li class="profile-nav onhover-dropdown pe-0 py-0">
           <div class="d-flex align-items-center profile-media"><img class="b-r-25" src="/design/admin/assets/images/dashboard/profile.png" alt="">
             <div class="flex-grow-1 user"><span>{{$viewData["userfirstname"]}} {{$viewData["userlastname"]}}</span>
@@ -19,7 +18,21 @@
             </div>
           </div>
           <ul class="profile-dropdown onhover-show-div">
-            <li><a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil </span></a></li>
+            <li>
+              @if(isset($viewData["userprofile"]))
+                @if($viewData["userprofile"] == 'DIFFUSEUR')
+                  <a href="{{ route('influencer.profile') }}"><i data-feather="user"></i><span>Mon Profil</span></a>
+                @elseif($viewData["userprofile"] == 'ANNONCEUR')
+                  <a href="/admin/client/profile"><i data-feather="user"></i><span>Mon Profil</span></a>
+                @elseif($viewData["userprofile"] == 'ADMIN')
+                  <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+                @else
+                  <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+                @endif
+              @else
+                <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+              @endif
+            </li>
             <li><a href="/admin/logout"> <i data-feather="log-in"></i><span>D&eacute;connexion</span></a></li>
           </ul>
         </li>
@@ -36,4 +49,4 @@
     <script class="empty-template" type="text/x-handlebars-template"><div class="EmptyMessage">Votre recherche a donn&eacute; 0 resultats</div></script>
   </div>
 </div>
-<!-- Page Header Ends
+<!-- Page Header Ends -->
