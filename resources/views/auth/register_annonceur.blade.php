@@ -15,7 +15,7 @@
             
             <!-- Circles which indicates the steps of the form:-->
             <div class="text-center"><span class="step"></span><span class="step"></span></div>
-            <form class="form-wizard" id="registration_form" action="{{ route('admin.register.annonceur.post') }}" method="POST">
+            <form class="form-wizard" id="registration_form" action="https://whatspay.africa{{ str_replace('http://whatspay.africa', '', route('admin.register.annonceur.post')) }}" method="POST">
               <h4>Inscription Annonceur</h4>
               <p>Entrez vos informations personnelles pour vous inscrire en tant qu'annonceur</p>
               
