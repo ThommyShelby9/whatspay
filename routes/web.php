@@ -9,6 +9,10 @@ use App\Http\Controllers\Web\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Request;
 
+// Ajoutez cet alias
+Route::get('/login', function () {
+    return redirect()->route('admin.login');
+})->name('login');
 
 // Routes publiques
 Route::get('/', [PageController::class, 'home'])->name('home');

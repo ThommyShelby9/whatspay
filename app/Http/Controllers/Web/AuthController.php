@@ -267,12 +267,14 @@ class AuthController extends Controller
 
         $result = $this->authService->register($userData);
 
-        if ($result['success']) {
-            $url = URL::route('admin.login', [], true, config('app.url'));
-            return redirect()->to($url)->with([
-                'message' => 'Inscription enregistrée avec succès. Un code de vérification a été envoyé à votre email. Veuillez vérifier votre boîte mail pour valider votre compte.',
-                'type' => 'success'
-            ]);
+if ($result['success']) {
+    $url = URL::route('auth.verify-account', [], true, config('app.url'));
+    return redirect()->to($url)->with([
+        'email' => $request->email, // Pré-remplir l'email
+        'message' => 'Inscription enregistrée avec succès. Un code de vérification a été envoyé à votre email. Veuillez entrer ce code pour valider votre compte.',
+        'type' => 'success'
+    ]);
+
         } else {
             $alert["type"] = "danger";
             $alert["message"] = $result['message'];
@@ -282,26 +284,30 @@ class AuthController extends Controller
         }
     }
 
-    public function verifyAccountGet(Request $request)
-    {
-        $viewData = []; 
-        $alert = []; 
-        $this->setAlert($request, $alert);
-        
-        if ($this->isConnected()) {
-            return $this->redirect($request, $alert);
-        }
-
-        $this->setViewData($request, $viewData);
-        return view('auth.verify_account', [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
-            'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Vérification de compte', 
-            'pagetilte' => 'Vérification de compte', 
-            'pagecardtilte' => '',
-        ]);
+public function verifyAccountGet(Request $request)
+{
+    $viewData = []; 
+    $alert = []; 
+    $this->setAlert($request, $alert);
+    
+    if ($this->isConnected()) {
+        return $this->redirect($request, $alert);
     }
+
+    // Récupérer l'email depuis la session si disponible
+    $email = session('email', '');
+    
+    $this->setViewData($request, $viewData);
+    return view('auth.verify_account', [
+        'alert' => $alert, 
+        'viewData' => $viewData,
+        'email' => $email, // Passer l'email à la vue
+        'version' => gmdate("YmdHis"),
+        'title' => 'WhatsPAY | Vérification de compte', 
+        'pagetilte' => 'Vérification de compte', 
+        'pagecardtilte' => '',
+    ]);
+}
 
     public function verifyAccountPost(Request $request)
     {

@@ -17,7 +17,7 @@
               <p>Entrez votre email et le code de vérification reçu</p>
               <div class="form-group">
                 <label class="col-form-label">Email</label>
-                <input class="form-control" type="email" id="email" name="email" required="" placeholder="votre@email.com" value="{{ old('email') }}">
+                <input class="form-control" type="email" id="email" name="email" required="" placeholder="votre@email.com" value="{{ $email ?? old('email') }}">
               </div>
               <div class="form-group">
                 <label class="col-form-label">Code de vérification</label>

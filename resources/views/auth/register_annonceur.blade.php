@@ -50,20 +50,23 @@
                     <label class="col-form-label">Adresse mail</label>
                     <input class="form-control" type="email" id="email" name="email" required placeholder="votre@mail.com" value="{{ old('email') }}">
                   </div>
-                  <div class="form-group">
-                    <label class="col-form-label">Mot de passe</label>
-                    <div class="form-input position-relative">
-                      <input class="form-control" type="password" id="password" name="password" required placeholder="*********">
-                      <div class="show-hide"><span class="show" data-index="password"></span></div>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label class="col-form-label">Confirmation mot de passe</label>
-                    <div class="form-input position-relative">
-                      <input class="form-control" type="password" id="password_confirmation" name="password_confirmation" required placeholder="*********">
-                      <div class="show-hide"><span class="show" data-index="password_confirmation"></span></div>
-                    </div>
-                  </div>
+<div class="form-group">
+  <label class="col-form-label">Mot de passe</label>
+  <div class="form-input position-relative">
+    <input class="form-control" type="password" id="password" name="password" required placeholder="*********">
+    <div class="show-hide"><span class="show" data-index="password"></span></div>
+  </div>
+  <small class="form-text text-muted mt-1">
+    Au moins 8 caractères, dont 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial.
+  </small>
+</div>
+<div class="form-group">
+  <label class="col-form-label">Confirmation mot de passe</label>
+  <div class="form-input position-relative">
+    <input class="form-control" type="password" id="password_confirmation" name="password_confirmation" required placeholder="*********">
+    <div class="show-hide"><span class="show" data-index="password_confirmation"></span></div>
+  </div>
+</div>
                 </div>
               </div>
               
