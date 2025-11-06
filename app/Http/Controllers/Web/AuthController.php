@@ -268,7 +268,7 @@ class AuthController extends Controller
         $result = $this->authService->register($userData);
 
 if ($result['success']) {
-    $url = URL::route('auth.verify-account', [], true, config('app.url'));
+    $url = URL::route('auth.verify_account', [], true, config('app.url'));
     return redirect()->to($url)->with([
         'email' => $request->email, // Pré-remplir l'email
         'message' => 'Inscription enregistrée avec succès. Un code de vérification a été envoyé à votre email. Veuillez entrer ce code pour valider votre compte.',
