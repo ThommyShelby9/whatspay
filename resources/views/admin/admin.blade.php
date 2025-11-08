@@ -56,8 +56,9 @@
               <select class="form-select" id="locality" name="locality_id">
                 <option value="">Toutes les localités</option>
                 @foreach($viewData['localities'] ?? [] as $locality)
-                <option value="{{ $locality->id }}" {{ (request('locality_id') == $locality->id) ? 'selected' : '' }}>{{ $locality->name }}</option>
-                @endforeach
+<option value="{{$item->id}}"
+        @if(isset($viewData["filtre_country"]) && $item->id == $viewData["filtre_country"]) selected @endif
+>{{$item->name}} {{$item->emoji ?? ''}}</option>                @endforeach
               </select>
             </div>
             @if(request()->route('group') == 'diffuseur')

@@ -10,6 +10,7 @@ use App\Traits\Utils;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 
 class UserService
@@ -502,4 +503,42 @@ class UserService
             'total_gain' => $totalGain ?? 0,
         ];
     }
+/**
+ * Supprime un utilisateur par son ID
+ * 
+ * @param string $userId ID de l'utilisateur à supprimer
+ * @return array Résultat de l'opération
+ */
+public function deleteUser($userId)
+{
+    $result = [
+        'success' => false,
+        'message' => 'Une erreur est survenue lors de la suppression de l\'utilisateur'
+    ];
+    
+    try {
+        // Vérifier si l'utilisateur existe
+        $user = User::find($userId);
+        
+        if (!$user) {
+            $result['message'] = 'Utilisateur non trouvé';
+            return $result;
+        }
+        
+        // Supprimer les relations
+        DB::table('role_user')->where('user_id', $userId)->delete();
+        DB::table('category_user')->where('user_id', $userId)->delete();
+        DB::table('contenttype_user')->where('user_id', $userId)->delete();
+        
+        // Supprimer l'utilisateur
+        DB::table('users')->where('id', $userId)->delete();
+        
+        $result['success'] = true;
+        $result['message'] = 'Utilisateur supprimé avec succès';
+    } catch (\Exception $e) {
+        $result['message'] = 'Erreur lors de la suppression: ' . $e->getMessage();
+    }
+    
+    return $result;
+}
 }

@@ -28,7 +28,7 @@
                       <div class="col-6">
                         <input class="form-control" type="text" id="prenom" name="prenom" required placeholder="Prénom(s)" value="{{ old('prenom') }}">
                       </div>
-                      <div class="col-6">
+                      <div class="col-6">    
                         <input class="form-control" type="text" id="nom" name="nom" required placeholder="Nom" value="{{ old('nom') }}">
                       </div>
                     </div>

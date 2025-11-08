@@ -79,8 +79,11 @@ Route::group(['prefix' => 'admin'], function () {
         Route::post('/verify-phone', [WhatsAppController::class, 'verifyPhonePost'])->name('admin.verify_phone.post');
         
         // Gestion des utilisateurs
-        Route::get('/users_{group}', [UserController::class, 'usersGet'])->name('admin.users');
-        Route::post('/users_{group}', [UserController::class, 'usersPost'])->name('admin.users.update');
+// Pour la vue des utilisateurs
+Route::get('/users_{group}', [UserController::class, 'usersGet'])->name('admin.users');
+
+// Pour les actions sur les utilisateurs
+Route::post('/users_{group}', [UserController::class, 'usersPost'])->name('admin.users');
 
         // Dashboard Annonceur
     Route::get('/client/dashboard', [DashboardController::class, 'announcerDashboard'])->name('admin.client.dashboard');

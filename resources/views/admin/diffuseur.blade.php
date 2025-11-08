@@ -443,6 +443,156 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer le jeton CSRF
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                     document.querySelector('input[name="_token"]')?.value;
+    
+    // 1. Gestion des boutons du dropdown
+    document.querySelectorAll('.dropdown-menu a.dropdown-item').forEach(item => {
+        // Pour les boutons Statistiques et Campagnes, rediriger vers la bonne URL
+        if (item.innerHTML.includes('Statistiques') || item.innerHTML.includes('Campagnes')) {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Récupérer l'ID de l'utilisateur
+                const dropdown = this.closest('.dropdown');
+                const button = dropdown.querySelector('button');
+                const userId = button.id.split('-')[1] || button.getAttribute('data-user-id');
+                
+                // Déterminer l'action
+                const action = this.innerHTML.includes('Statistiques') ? 'stats' : 'campaigns';
+                
+                // Rediriger vers l'URL avec l'action et l'ID
+                const currentUrl = new URL(window.location.href);
+                const baseUrl = currentUrl.pathname.split('?')[0];
+                window.location.href = `${baseUrl}?action=${action}&id=${userId}`;
+            });
+        }
+    });
+    
+    // 2. Gestion du changement de statut (toggle)
+    document.querySelectorAll('.toggle-status').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            const enabled = this.checked ? 1 : 0;
+            const statusLabel = this.closest('.form-check').querySelector('.status-label') || 
+                               this.nextElementSibling;
+            
+            // Mise à jour visuelle immédiate
+            if (statusLabel) {
+                if (this.checked) {
+                    statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+                } else {
+                    statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
+                }
+            }
+            
+            // Envoyer la requête AJAX
+            fetch(window.location.pathname, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'toggle_status',
+                    user_id: userId,
+                    enabled: enabled
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    // Réinitialiser le toggle en cas d'erreur
+                    this.checked = !this.checked;
+                    if (statusLabel) {
+                        if (this.checked) {
+                            statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+                        } else {
+                            statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
+                        }
+                    }
+                    
+                    // Afficher l'erreur
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Réinitialiser le toggle en cas d'erreur
+                this.checked = !this.checked;
+                if (statusLabel) {
+                    if (this.checked) {
+                        statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+                    } else {
+                        statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
+                    }
+                }
+                
+                alert('Une erreur est survenue lors de la modification du statut');
+            });
+        });
+    });
+    
+    // 3. Configuration du modal de suppression
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const userId = button.getAttribute('data-user-id');
+            const userName = button.getAttribute('data-user-name');
+            
+            const userNameSpan = this.querySelector('#delete-user-name');
+            const userIdInput = this.querySelector('#delete-user-id');
+            
+            if (userNameSpan) userNameSpan.textContent = userName;
+            if (userIdInput) userIdInput.value = userId;
+            
+            // Configurer l'action du formulaire
+            const form = this.querySelector('form#delete-user-form');
+            if (form) form.action = window.location.pathname;
+        });
+    }
+    
+    // 4. Interaction entre les filtres pays et localités
+    const countrySelect = document.getElementById('filtre_country');
+    const localitySelect = document.getElementById('filtre_locality');
+    
+    if (countrySelect && localitySelect) {
+        countrySelect.addEventListener('change', function() {
+            const selectedCountryId = this.value;
+            
+            // Vider la liste des localités
+            localitySelect.innerHTML = '<option value="all">Toutes les localités</option>';
+            
+            if (selectedCountryId !== 'all' && selectedCountryId !== '') {
+                try {
+                    // Récupérer les données de localités depuis l'élément caché
+                    const localitiesJson = document.getElementById('localitiesJson');
+                    if (localitiesJson) {
+                        const localities = JSON.parse(localitiesJson.value);
+                        
+                        // Filtrer et ajouter les localités correspondant au pays sélectionné
+                        localities
+                            .filter(locality => locality.country_id == selectedCountryId)
+                            .forEach(locality => {
+                                const option = document.createElement('option');
+                                option.value = locality.id;
+                                option.textContent = locality.name;
+                                localitySelect.appendChild(option);
+                            });
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du chargement des localités:', error);
+                }
+            }
+        });
+    }
+});
 </script>
 @endpush
 @endsection
