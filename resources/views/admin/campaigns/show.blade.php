@@ -174,38 +174,57 @@
             <div class="col-md-12">
               <h6 class="text-uppercase text-muted mb-2">Médias</h6>
               <div class="row">
-                @if($task->files)
-                  @php
-                    $files = json_decode($task->files, true);
-                  @endphp
-                  @foreach($files as $file)
-                    <div class="col-md-3 mb-3">
-                      <div class="card h-100">
-                        @if(strpos($file['mime'], 'image') !== false)
-                          <img src="{{ asset($file['path']) }}" class="card-img-top" style="height: 160px; object-fit: cover;">
-                        @elseif(strpos($file['mime'], 'video') !== false)
-                          <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 160px;">
-                            <i class="fas fa-film fa-2x text-white"></i>
-                          </div>
-                        @else
-                          <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 160px;">
-                            <i class="fas fa-file fa-2x text-muted"></i>
-                          </div>
-                        @endif
-                        <div class="card-body p-2">
-                          <p class="card-text small text-truncate mb-0">{{ $file['original_name'] }}</p>
-                          <a href="{{ asset($file['path']) }}" target="_blank" class="btn btn-sm btn-light mt-2">
-                            <i class="fas fa-eye me-1"></i>Voir
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  @endforeach
-                @else
-                  <div class="col-12">
-                    <div class="alert alert-light">Aucun média attaché à cette campagne</div>
-                  </div>
-                @endif
+@if($viewData["task"]->files)
+  @php
+    $filesData = $viewData["task"]->files;
+    // Si la chaîne commence par [ et se termine par ], c'est probablement du JSON
+    if (is_string($filesData) && substr(trim($filesData), 0, 1) === '[' && substr(trim($filesData), -1) === ']') {
+      $files = json_decode($filesData, true);
+      // Vérifier si le décodage a réussi
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        $files = [];
+      }
+    } else {
+      $files = [];
+    }
+  @endphp
+  
+  @if(count($files) > 0)
+    @foreach($files as $file)
+      <div class="col-md-3 mb-3">
+        <div class="card h-100">
+          @if(isset($file['mime']) && strpos($file['mime'], 'image') !== false)
+            <img src="{{ asset($file['path']) }}" class="card-img-top" style="height: 160px; object-fit: cover;">
+          @elseif(isset($file['mime']) && strpos($file['mime'], 'video') !== false)
+            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 160px;">
+              <i class="fas fa-film fa-2x text-white"></i>
+            </div>
+          @else
+            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 160px;">
+              <i class="fas fa-file fa-2x text-muted"></i>
+            </div>
+          @endif
+          <div class="card-body p-2">
+            <p class="card-text small text-truncate mb-0">{{ $file['original_name'] ?? ($file['name'] ?? 'Fichier') }}</p>
+            @if(isset($file['path']))
+              <a href="{{ asset($file['path']) }}" target="_blank" class="btn btn-sm btn-light mt-2">
+                <i class="fas fa-eye me-1"></i>Voir
+              </a>
+            @endif
+          </div>
+        </div>
+      </div>
+    @endforeach
+  @else
+    <div class="col-12">
+      <div class="alert alert-light">Aucun média interprétable pour cette campagne</div>
+    </div>
+  @endif
+@else
+  <div class="col-12">
+    <div class="alert alert-light">Aucun média attaché à cette campagne</div>
+  </div>
+@endif
               </div>
             </div>
           </div>
@@ -464,41 +483,58 @@
               <div class="form-group mb-3">
                 <label class="form-label">Médias actuels</label>
                 <div class="row">
-                  @if($task->files)
-                    @php
-                      $files = json_decode($task->files, true);
-                    @endphp
-                    @foreach($files as $index => $file)
-                      <div class="col-md-3 mb-3">
-                        <div class="card h-100">
-                          @if(strpos($file['mime'], 'image') !== false)
-                            <img src="{{ asset($file['path']) }}" class="card-img-top" style="height: 120px; object-fit: cover;">
-                          @elseif(strpos($file['mime'], 'video') !== false)
-                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 120px;">
-                              <i class="fas fa-film fa-2x text-white"></i>
-                            </div>
-                          @else
-                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 120px;">
-                              <i class="fas fa-file fa-2x text-muted"></i>
-                            </div>
-                          @endif
-                          <div class="card-body p-2">
-                            <div class="form-check">
-                              <input class="form-check-input" type="checkbox" name="keep_files[]" value="{{ $index }}" id="keep-file-{{ $index }}" checked>
-                              <label class="form-check-label" for="keep-file-{{ $index }}">
-                                Conserver
-                              </label>
-                            </div>
-                            <p class="card-text small text-truncate mb-0">{{ $file['original_name'] }}</p>
-                          </div>
-                        </div>
-                      </div>
-                    @endforeach
-                  @else
-                    <div class="col-12">
-                      <div class="alert alert-light">Aucun média attaché à cette campagne</div>
-                    </div>
-                  @endif
+@if($viewData["task"]->files)
+  @php
+    $filesData = $viewData["task"]->files;
+    // Si la chaîne commence par [ et se termine par ], c'est probablement du JSON
+    if (is_string($filesData) && substr(trim($filesData), 0, 1) === '[' && substr(trim($filesData), -1) === ']') {
+      $files = json_decode($filesData, true);
+      // Vérifier si le décodage a réussi
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        $files = [];
+      }
+    } else {
+      $files = [];
+    }
+  @endphp
+  
+  @if(count($files) > 0)
+    @foreach($files as $index => $file)
+      <div class="col-md-3 mb-3">
+        <div class="card h-100">
+          @if(isset($file['mime']) && strpos($file['mime'], 'image') !== false)
+            <img src="{{ asset($file['path']) }}" class="card-img-top" style="height: 120px; object-fit: cover;">
+          @elseif(isset($file['mime']) && strpos($file['mime'], 'video') !== false)
+            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 120px;">
+              <i class="fas fa-film fa-2x text-white"></i>
+            </div>
+          @else
+            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 120px;">
+              <i class="fas fa-file fa-2x text-muted"></i>
+            </div>
+          @endif
+          <div class="card-body p-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="keep_files[]" value="{{ $index }}" id="keep-file-{{ $index }}" checked>
+              <label class="form-check-label" for="keep-file-{{ $index }}">
+                Conserver
+              </label>
+            </div>
+            <p class="card-text small text-truncate mb-0">{{ $file['original_name'] ?? ($file['name'] ?? 'Fichier') }}</p>
+          </div>
+        </div>
+      </div>
+    @endforeach
+  @else
+    <div class="col-12">
+      <div class="alert alert-light">Aucun média interprétable pour cette campagne</div>
+    </div>
+  @endif
+@else
+  <div class="col-12">
+    <div class="alert alert-light">Aucun média attaché à cette campagne</div>
+  </div>
+@endif
                 </div>
               </div>
             </div>
