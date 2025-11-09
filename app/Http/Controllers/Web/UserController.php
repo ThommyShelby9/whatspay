@@ -333,12 +333,6 @@ class UserController extends Controller
 /**
  * Supprime un utilisateur
  */
-/**
- * Supprime un utilisateur
- */
-/**
- * Supprime un utilisateur
- */
 private function deleteUser(Request $request, $group)
 {
     $userId = $request->input('user_id');
@@ -350,35 +344,28 @@ private function deleteUser(Request $request, $group)
         return redirect()->route('admin.users', ['group' => $group])->with($alert);
     }
     
-    try {
-        // Vérifier si l'utilisateur existe
-        $userExists = DB::table('users')->where('id', $userId)->exists();
-        
-        if (!$userExists) {
-            $alert['type'] = 'danger';
-            $alert['message'] = 'Utilisateur non trouvé (ID: ' . $userId . ')';
-            return redirect()->route('admin.users', ['group' => $group])->with($alert);
-        }
-        
-        // Supprimer les relations associées
-        DB::table('role_user')->where('user_id', $userId)->delete();
-        DB::table('category_user')->where('user_id', $userId)->delete();
-        DB::table('contenttype_user')->where('user_id', $userId)->delete();
-        
-        // Supprimer l'utilisateur
-        $deleted = DB::table('users')->where('id', $userId)->delete();
-        
-        if ($deleted) {
-            $alert['type'] = 'success';
-            $alert['message'] = 'Utilisateur supprimé avec succès';
-        } else {
-            $alert['type'] = 'warning';
-            $alert['message'] = 'Aucun utilisateur n\'a été supprimé';
-        }
-    } catch (\Exception $e) {
-        $alert['type'] = 'danger';
-        $alert['message'] = 'Erreur lors de la suppression: ' . $e->getMessage();
+    // Utiliser le service au lieu de dupliquer la logique
+    $result = $this->userService->deleteUser($userId);
+    
+    $alert['type'] = $result['success'] ? 'success' : 'danger';
+    $alert['message'] = $result['message'];
+    
+    return redirect()->route('admin.users', ['group' => $group])->with($alert);
+}
+
+public function deleteUserById(Request $request, $group, $userId)
+{
+    $alert = []; 
+    $this->setAlert($request, $alert);
+    
+    if (!$this->isConnected()) {
+        return redirect(config('app.url').'/admin/login')->with($alert);
     }
+    
+    $result = $this->userService->deleteUser($userId);
+    
+    $alert['type'] = $result['success'] ? 'success' : 'danger';
+    $alert['message'] = $result['message'];
     
     return redirect()->route('admin.users', ['group' => $group])->with($alert);
 }

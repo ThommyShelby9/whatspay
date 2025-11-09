@@ -247,7 +247,7 @@
                     <li><a class="dropdown-item" href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'campaigns', 'id' => $item->id]) }}"><i class="fa fa-tasks me-2"></i>Campagnes</a></li>
                     @endif
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" data-user-id="{{$item->id}}" data-user-name="{{$item->firstname}} {{$item->lastname}}"><i class="fa fa-trash me-2"></i>Supprimer</a></li>
+                    <li><a class="dropdown-item text-danger delete-user-btn" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal" data-user-id="{{$item->id}}" data-user-name="{{$item->firstname}} {{$item->lastname}}"><i class="fa fa-trash me-2"></i>Supprimer</a></li>
                   </ul>
                 </div>
               </td>
@@ -368,11 +368,11 @@
             <a href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'edit', 'id' => $viewData['userDetails']->id]) }}" class="btn btn-primary me-2">
               <i class="fa fa-edit me-1"></i>Modifier
             </a>
-<a href="#" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" 
-   data-user-id="{{$viewData['userDetails']->id}}" 
-   data-user-name="{{$viewData['userDetails']->firstname}} {{$viewData['userDetails']->lastname}}">
-  <i class="fa fa-trash me-1"></i>Supprimer
-</a>
+            <a href="#" class="btn btn-danger delete-user-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" 
+               data-user-id="{{$viewData['userDetails']->id}}" 
+               data-user-name="{{$viewData['userDetails']->firstname}} {{$viewData['userDetails']->lastname}}">
+              <i class="fa fa-trash me-1"></i>Supprimer
+            </a>
           </div>
         </div>
       </div>
@@ -645,8 +645,7 @@
   @endif
 </div>
 
-<!-- Delete User Modal -->
-<!-- Delete User Modal -->
+<!-- Delete User Modal - Version améliorée avec débogage -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -657,15 +656,16 @@
       <div class="modal-body">
         <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <span id="delete-user-name" class="fw-bold">cet utilisateur</span> ?</p>
         <p class="text-danger">Cette action est irréversible.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <form id="delete-user-form" action="{{ route('admin.users', ['group' => request()->route('group')]) }}" method="POST" class="d-inline">
+        
+        <form id="delete-form" method="POST" action="{{ route('admin.users', ['group' => request()->route('group')]) }}">
           @csrf
           <input type="hidden" name="action" value="delete_user">
           <input type="hidden" name="user_id" id="delete-user-id">
-          <button type="submit" class="btn btn-danger">Supprimer</button>
         </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" form="delete-form" class="btn btn-danger">Supprimer</button>
       </div>
     </div>
   </div>
@@ -685,40 +685,59 @@
 @endif
 
 @push('scripts')
+<!-- jQuery doit être chargé en premier -->
+<script src="{{ asset('design/admin/assets/js/jquery.min.js') }}"></script>
+
+<!-- Puis DataTables et ses extensions -->
+<script src="{{ asset('design/admin/assets/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('design/admin/assets/js/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ asset('design/admin/assets/js/dataTables.buttons.min.js') }}"></script>
+<script src="{{ asset('design/admin/assets/js/buttons.html5.min.js') }}"></script>
+
+<!-- Script personnalisé pour le modal de suppression -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Initialisation de DataTable (uniquement si nous sommes en mode liste)
   @if(!request()->has('action'))
-  const dataTable = $('#items_datatable').DataTable({
-    responsive: true,
-    dom: 'Bfrtip',
-    buttons: [
-      'copyHtml5',
-      'excelHtml5',
-      'csvHtml5',
-      'pdfHtml5'
-    ],
-    lengthMenu: [
-      [10, 25, 50, -1],
-      [10, 25, 50, 'Tous']
-    ],
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
-    }
-  });
+  // Vérifier si DataTables est disponible
+  if (typeof $.fn.DataTable === 'function') {
+    try {
+      const dataTable = $('#items_datatable').DataTable({
+        responsive: true,
+        dom: 'Bfrtip',
+        buttons: [
+          'copyHtml5',
+          'excelHtml5',
+          'csvHtml5',
+          'pdfHtml5'
+        ],
+        lengthMenu: [
+          [10, 25, 50, -1],
+          [10, 25, 50, 'Tous']
+        ],
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+        }
+      });
 
-  // Boutons d'exportation
-  document.getElementById('export-excel')?.addEventListener('click', function() {
-    dataTable.button('.buttons-excel').trigger();
-  });
-  
-  document.getElementById('export-pdf')?.addEventListener('click', function() {
-    dataTable.button('.buttons-pdf').trigger();
-  });
-  
-  document.getElementById('export-csv')?.addEventListener('click', function() {
-    dataTable.button('.buttons-csv').trigger();
-  });
+      // Boutons d'exportation
+      document.getElementById('export-excel')?.addEventListener('click', function() {
+        dataTable.button('.buttons-excel').trigger();
+      });
+      
+      document.getElementById('export-pdf')?.addEventListener('click', function() {
+        dataTable.button('.buttons-pdf').trigger();
+      });
+      
+      document.getElementById('export-csv')?.addEventListener('click', function() {
+        dataTable.button('.buttons-csv').trigger();
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de DataTables:', error);
+    }
+  } else {
+    console.error('DataTables non disponible');
+  }
   @endif
 
   // Interaction entre pays et localités pour les filtres
@@ -817,61 +836,39 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   });
-  
-  // Configuration du modal de suppression
-// Configuration du modal de suppression
-// Configuration du modal de suppression
-const deleteModal = document.getElementById('deleteModal');
-if (deleteModal) {
-    console.log('Modal trouvé:', deleteModal); // Vérifier que le modal est trouvé
-    
+
+  // Modal de suppression
+  const deleteModal = document.getElementById('deleteModal');
+  if (deleteModal) {
     deleteModal.addEventListener('show.bs.modal', function(event) {
-        console.log('Événement modal déclenché:', event); // Vérifier que l'événement est déclenché
-        
-        const button = event.relatedTarget;
-        console.log('Bouton déclencheur:', button); // Vérifier le bouton qui a déclenché le modal
-        
-        if (button) {
-            const userId = button.getAttribute('data-user-id');
-            const userName = button.getAttribute('data-user-name');
-            
-            console.log('Attributs du bouton:');
-            console.log('- data-user-id:', userId);
-            console.log('- data-user-name:', userName);
-            
-            if (userId) {
-                const userIdInput = document.getElementById('delete-user-id');
-                if (userIdInput) {
-                    userIdInput.value = userId;
-                    console.log('ID utilisateur défini dans le champ:', userIdInput.value);
-                } else {
-                    console.error('Élément #delete-user-id non trouvé');
-                }
-                
-                const userNameSpan = document.getElementById('delete-user-name');
-                if (userNameSpan) {
-                    userNameSpan.textContent = userName || 'Cet utilisateur';
-                } else {
-                    console.error('Élément #delete-user-name non trouvé');
-                }
-            } else {
-                console.error('Attribut data-user-id manquant sur le bouton');
-            }
-        } else {
-            console.error('Bouton déclencheur non trouvé dans l\'événement');
-        }
-        
-        // Ne pas modifier l'action du formulaire si elle est déjà définie correctement
-        const form = document.getElementById('delete-user-form');
-        if (form) {
-            console.log('Formulaire trouvé, action définie:', form.action);
-        } else {
-            console.error('Formulaire #delete-user-form non trouvé');
-        }
+      const button = event.relatedTarget;
+      const userId = button.getAttribute('data-user-id');
+      const userName = button.getAttribute('data-user-name');
+      
+      console.log('Modal ouvert pour utilisateur:', userId, userName);
+      
+      document.getElementById('delete-user-name').textContent = userName || 'cet utilisateur';
+      document.getElementById('delete-user-id').value = userId;
+      
+      // Vérification que l'ID est bien passé
+      console.log('ID utilisateur défini dans le formulaire:', document.getElementById('delete-user-id').value);
     });
-} else {
-    console.error('Modal #deleteModal non trouvé dans le document');
-}
+    
+    // Vérification avant soumission du formulaire
+    const deleteForm = document.getElementById('delete-form');
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', function(event) {
+        const userId = document.getElementById('delete-user-id').value;
+        console.log('Soumission du formulaire avec ID utilisateur:', userId);
+        
+        if (!userId) {
+          event.preventDefault();
+          alert('Erreur: ID utilisateur manquant. Veuillez réessayer.');
+          console.error('ID utilisateur manquant lors de la soumission du formulaire');
+        }
+      });
+    }
+  }
   
   // Toggle statut dans le formulaire d'édition
   const enabledToggle = document.getElementById('enabled');

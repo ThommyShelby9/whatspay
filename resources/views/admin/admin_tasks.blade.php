@@ -18,9 +18,10 @@
             </nav>
           </div>
           <div class="col-auto">
-            <button class="btn btn-primary">
-              <i class="fa fa-plus me-2"><a href="{{ route('admin.campaigns.create') }}">Dashboard</a></i>Nouvelle Campagne
-            </button>
+            <!-- Correction du bouton pour qu'il soit un lien propre -->
+            <a href="{{ route('admin.campaigns.create') }}" class="btn btn-primary">
+              <i class="fa fa-plus me-2"></i>Nouvelle Campagne
+            </a>
           </div>
         </div>
       </div>
@@ -120,7 +121,7 @@
           <div class="d-flex">
             <div class="flex-grow-1">
               <h6 class="mb-2 text-uppercase text-muted">Budget total</h6>
-              <h4 class="mb-0">{{ number_format($viewData['taskStats']['total_budget'] ?? 0) }} F</h4>
+              <h4 class="mb-0">{{ number_format($viewData['taskStats']['total_budget'] ?? 0, 0, ',', ' ') }} F</h4>
             </div>
             <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
               <span class="avatar-title rounded-circle bg-primary">
@@ -142,7 +143,7 @@
           <span>Options de filtre</span>
         </div>
         <div class="card-body">
-          <form class="form theme-form" method="post" action="{{ route('admin.tasks') }}">
+          <form class="form theme-form" method="get" action="{{ route('admin.tasks') }}">
             <div class="row">
               <div class="col-md-3">
                 <div class="form-group">
@@ -199,7 +200,6 @@
                 </div>
               </div>
             </div>
-            <input type="hidden" name="_token" value="{{ csrf_token() }}" />
           </form>
         </div>
       </div>
@@ -247,16 +247,31 @@
               <tbody>
                 @forelse($viewData["tasks"] ?? [] as $task)
                 <tr>
-                  <td>{{ $task->id }}</td>
+                  <td>{{ substr($task->id ?? '', 0, 8) }}</td>
                   <td>
-                    <h6 class="mb-0">{{ $task->name }}</h6>
+                    <h6 class="mb-0">{{ $task->name ?? 'Sans titre' }}</h6>
                     <small class="text-muted">{{ Str::limit($task->descriptipon ?? '', 50) }}</small>
                   </td>
                   <td>
-                    {{ $task->client_name ?? 'N/A' }}
+                    @if(isset($task->client_name))
+                      {{ $task->client_name }}
+                    @elseif(isset($task->client_id))
+                      @php
+                        $client = null;
+                        foreach(($viewData["clients"] ?? []) as $c) {
+                          if($c->id == $task->client_id) {
+                            $client = $c;
+                            break;
+                          }
+                        }
+                      @endphp
+                      {{ $client ? $client->firstname.' '.$client->lastname : 'Client #'.$task->client_id }}
+                    @else
+                      N/A
+                    @endif
                   </td>
                   <td>
-                    <span class="badge bg-success">{{ number_format($task->budget ?? 0) }} F</span>
+                    <span class="badge bg-success">{{ number_format($task->budget ?? 0, 0, ',', ' ') }} F</span>
                   </td>
                   <td>
                     @if(isset($task->startdate) && isset($task->enddate))
@@ -267,29 +282,26 @@
                     @endif
                   </td>
                   <td>
-                    @if($task->status == 'PENDING')
-                      <span class="badge bg-warning">En attente</span>
-                    @elseif($task->status == 'ACCEPTED')
-                      <span class="badge bg-primary">Acceptée</span>
-                    @elseif($task->status == 'PAID')
-                      <span class="badge bg-success">Payée</span>
-                    @elseif($task->status == 'REJECTED')
-                      <span class="badge bg-danger">Rejetée</span>
-                    @elseif($task->status == 'CLOSED')
-                      <span class="badge bg-secondary">Fermée</span>
-                    @else
-                      <span class="badge bg-secondary">{{ $task->status }}</span>
-                    @endif
+                    @php
+                      $status = $task->status ?? '';
+                      $statusLabels = [
+                        'PENDING' => ['En attente', 'bg-warning'],
+                        'ACCEPTED' => ['Acceptée', 'bg-primary'],
+                        'APPROVED' => ['Approuvée', 'bg-success'],
+                        'PAID' => ['Payée', 'bg-success'],
+                        'REJECTED' => ['Rejetée', 'bg-danger'],
+                        'CLOSED' => ['Fermée', 'bg-secondary'],
+                      ];
+                      $statusInfo = $statusLabels[$status] ?? [$status, 'bg-secondary'];
+                    @endphp
+                    <span class="badge {{ $statusInfo[1] }}">{{ $statusInfo[0] }}</span>
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      <a href="{{ route('admin.task', ['id' => $task->id]) }}" class="btn btn-primary btn-sm">
+                      <a href="{{ route('admin.campaigns.show', ['id' => $task->id]) }}" class="btn btn-primary btn-sm">
                         <i class="fa fa-eye"></i>
                       </a>
-                      <button class="btn btn-warning btn-sm edit-task" data-task-id="{{ $task->id }}">
-                        <i class="fa fa-edit"></i>
-                      </button>
-                      @if($task->status == 'PENDING')
+                      @if(($task->status ?? '') == 'PENDING')
                       <button class="btn btn-success btn-sm approve-task" data-task-id="{{ $task->id }}">
                         <i class="fa fa-check"></i>
                       </button>
@@ -317,98 +329,6 @@
   </div>
 </div>
 
-<!-- Create Task Modal -->
-<div class="modal fade" id="createTaskModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Créer une nouvelle Campagne</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="createTaskForm" method="post" action="" enctype="multipart/form-data">
-        <div class="modal-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Nom de la Campagne <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="name" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Client <span class="text-danger">*</span></label>
-                <select class="form-select" name="client_id" required>
-                  <option value="">Sélectionner un client</option>
-                  @foreach($viewData["clients"] ?? [] as $client)
-                  <option value="{{ $client->id }}">{{ $client->firstname }} {{ $client->lastname }}</option>
-                  @endforeach
-                </select>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row">
-            <div class="col-md-12">
-              <div class="form-group mb-3">
-                <label class="form-label">Description</label>
-                <textarea class="form-control" name="descriptipon" rows="3"></textarea>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Date de début <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" name="startdate" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Date de fin <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" name="enddate" required>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row">
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Budget (F) <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" name="budget" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group mb-3">
-                <label class="form-label">Catégories</label>
-                <select class="form-select" name="categories[]" multiple>
-                  @foreach($viewData["categories"] ?? [] as $category)
-                  <option value="{{ $category->id }}">{{ $category->name }}</option>
-                  @endforeach
-                </select>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row">
-            <div class="col-md-12">
-              <div class="form-group mb-3">
-                <label class="form-label">Fichiers</label>
-                <input type="file" class="form-control" name="files[]" multiple>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-          <button type="submit" class="btn btn-primary">Créer</button>
-        </div>
-        <input type="hidden" name="_token" value="{{ csrf_token() }}" />
-      </form>
-    </div>
-  </div>
-</div>
-
 <!-- Approve Task Modal -->
 <div class="modal fade" id="approveTaskModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -426,7 +346,7 @@
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
           <button type="submit" class="btn btn-success">Approuver</button>
         </div>
-        <input type="hidden" name="_token" value="{{ csrf_token() }}" />
+        @csrf
       </form>
     </div>
   </div>
@@ -451,7 +371,7 @@
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
           <button type="submit" class="btn btn-danger">Rejeter</button>
         </div>
-        <input type="hidden" name="_token" value="{{ csrf_token() }}" />
+        @csrf
       </form>
     </div>
   </div>
@@ -474,7 +394,8 @@
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
           <button type="submit" class="btn btn-danger">Supprimer</button>
         </div>
-        <input type="hidden" name="_token" value="{{ csrf_token() }}" />
+        @csrf
+        @method('DELETE')
       </form>
     </div>
   </div>
@@ -483,38 +404,37 @@
 @push('scripts')
 <script>
   $(document).ready(function() {
-    // Initialize DataTable
+    // Initialize DataTable with proper configuration
     $('#tasks-datatable').DataTable({
       language: {
         url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
       },
-      order: [[0, 'desc']]
-    });
-    
-    // Edit task
-    $('.edit-task').on('click', function() {
-      const taskId = $(this).data('task-id');
-      window.location.href = "{{ url('admin/task') }}/" + taskId;
+      order: [[0, 'desc']],
+      columnDefs: [
+        { orderable: false, targets: 6 } // Disable sorting on actions column
+      ],
+      responsive: true,
+      pageLength: 25
     });
     
     // Approve task
     $('.approve-task').on('click', function() {
       const taskId = $(this).data('task-id');
-      $('#approveTaskForm').attr('action', "{{ url('admin/task') }}/" + taskId + "/approve");
+      $('#approveTaskForm').attr('action', "{{ url('admin/campaigns') }}/" + taskId + "/approve");
       $('#approveTaskModal').modal('show');
     });
     
     // Reject task
     $('.reject-task').on('click', function() {
       const taskId = $(this).data('task-id');
-      $('#rejectTaskForm').attr('action', "{{ url('admin/task') }}/" + taskId + "/reject");
+      $('#rejectTaskForm').attr('action', "{{ url('admin/campaigns') }}/" + taskId + "/reject");
       $('#rejectTaskModal').modal('show');
     });
     
     // Delete task
     $('.delete-task').on('click', function() {
       const taskId = $(this).data('task-id');
-      $('#deleteTaskForm').attr('action', "{{ url('admin/task') }}/" + taskId + "/delete");
+      $('#deleteTaskForm').attr('action', "{{ url('admin/campaigns') }}/" + taskId);
       $('#deleteTaskModal').modal('show');
     });
     
@@ -529,17 +449,7 @@
       }
     });
     
-    // Export functions - disabled for now as routes may not exist
-    $('#exportCSV, #exportExcel, #exportPDF').on('click', function(e) {
-      e.preventDefault();
-      alert('Fonctionnalité d\'export à implémenter');
-      
-      // Once implemented, uncomment this:
-      /*
-      const format = $(this).attr('id').replace('export', '').toLowerCase();
-      window.location.href = "{{ url('admin/tasks/export') }}/" + format + "?" + $('form').serialize();
-      */
-    });
+
   });
 </script>
 @endpush

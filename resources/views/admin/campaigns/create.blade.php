@@ -101,32 +101,29 @@
               </div>
             </div>
 
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label class="form-label">Localité cible <span class="text-danger">*</span></label>
-                  <select class="form-select select2" name="locality_id" required>
-                    <option value="">Sélectionnez une localité...</option>
-                    @foreach($viewData["localities"] ?? [] as $locality)
-                    <option value="{{ $locality->id }}">{{ $locality->name }}</option>
-                    @endforeach
-                  </select>
-                  <small class="text-muted">Région où la campagne sera diffusée</small>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label class="form-label">Profession cible <span class="text-danger">*</span></label>
-                  <select class="form-select select2" name="occupation_id" required>
-                    <option value="">Sélectionnez une profession...</option>
-                    @foreach($viewData["occupations"] ?? [] as $occupation)
-                    <option value="{{ $occupation->id }}">{{ $occupation->name }}</option>
-                    @endforeach
-                  </select>
-                  <small class="text-muted">Profession des diffuseurs ciblés</small>
-                </div>
-              </div>
-            </div>
+<!-- Localités cibles -->
+<div class="form-group mb-3">
+    <label class="form-label">Localités cibles <span class="text-danger">*</span></label>
+    <select class="form-select select2" name="localities[]" multiple required>
+        <option value="">Sélectionnez une ou plusieurs localités...</option>
+        @foreach($viewData["localities"] ?? [] as $locality)
+        <option value="{{ $locality->id }}">{{ $locality->name }}</option>
+        @endforeach
+    </select>
+    <small class="text-muted">Régions où la campagne sera diffusée</small>
+</div>
+
+<!-- Professions cibles -->
+<div class="form-group mb-3">
+    <label class="form-label">Professions cibles <span class="text-danger">*</span></label>
+    <select class="form-select select2" name="occupations[]" multiple required>
+        <option value="">Sélectionnez une ou plusieurs professions...</option>
+        @foreach($viewData["occupations"] ?? [] as $occupation)
+        <option value="{{ $occupation->id }}">{{ $occupation->name }}</option>
+        @endforeach
+    </select>
+    <small class="text-muted">Professions des diffuseurs ciblés</small>
+</div>
 
             <div class="row mb-3">
               <div class="col-md-12">
@@ -232,11 +229,14 @@
 <script>
 $(document).ready(function() {
   // Initialize Select2
-  $('.select2').select2({
+// Initialisation du Select2 avec configuration pour sélection multiple
+$('.select2').select2({
     theme: 'bootstrap-5',
-    placeholder: 'Sélectionnez une option',
+    placeholder: 'Sélectionnez une ou plusieurs options',
     allowClear: true
-  });
+});
+
+// Ajoutez cette configuration CSS pour améliorer l'apparence
   
   // Afficher/masquer le champ URL selon le type de média
   $('select[name="media_type"]').on('change', function() {

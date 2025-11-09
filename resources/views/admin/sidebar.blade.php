@@ -9,18 +9,11 @@
       </div>
     </div>
     <div class="logo-icon-wrapper"><a href="/"><img class="img-fluid" src="/design/logo/logo.png" alt="" style="width: 50px; height: 50px;"></a></div>
-    <nav class="sidebar-main">
+    <nav class="sidebar-main ">
       <div class="left-arrow" id="left-arrow"><i data-feather="arrow-left"></i></div>
       <div id="sidebar-menu">
         <ul class="sidebar-links" id="simple-bar">
-          <li class="back-btn"><a href="/"><img class="img-fluid" src="/design/admin/assets/images/logo/logo-icon.png" alt=""></a>
-            <div class="mobile-back text-end"><span>Retour</span><i class="fa fa-angle-right ps-2" aria-hidden="true"></i></div>
-          </li>
-          <li class="pin-title sidebar-main-title">
-            <div>
-              <h6>Favoris</h6>
-            </div>
-          </li>
+          
 
           @if($viewData["userprofile"] == "ADMIN")
           <li class="sidebar-main-title">

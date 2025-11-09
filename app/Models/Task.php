@@ -37,4 +37,27 @@ class Task extends Model
         'schedule'
     ];
 
+        /**
+     * Relation avec les localités
+     */
+// Dans App\Models\Task
+public function categories()
+{
+    return $this->belongsToMany(Category::class);
+}
+
+public function localities()
+{
+    return $this->belongsToMany(Locality::class);
+}
+
+public function occupations()
+{
+    return $this->belongsToMany(Occupation::class);
+}
+
+public function client()
+{
+    return $this->belongsTo(User::class, 'client_id');
+}
 }

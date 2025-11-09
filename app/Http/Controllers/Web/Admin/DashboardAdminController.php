@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Task;
 use App\Services\AssignmentService;
 use App\Services\TaskService;
 use App\Services\UserService;
@@ -216,9 +217,8 @@ public function createCampaign(Request $request)
  */
 /**
  * Traite le formulaire de création d'une campagne
- *//**
- * Traite le formulaire de création d'une campagne
- */public function storeCampaign(Request $request)
+ */
+ public function storeCampaign(Request $request)
 {
     $viewData = []; 
     $alert = []; 
@@ -229,15 +229,17 @@ public function createCampaign(Request $request)
         return redirect()->to($url)->with($alert);
     }
     
-    // Validation du formulaire (sans valider les fichiers pour l'instant)
+    // Validation mise à jour pour les tableaux
     $request->validate([
         'name' => 'required|string|max:255',
         'budget' => 'required|numeric|min:1000',
         'startdate' => 'required|date',
         'enddate' => 'required|date|after_or_equal:startdate',
         'media_type' => 'required|string',
-        'locality_id' => 'required',
-        'occupation_id' => 'required',
+        'localities' => 'required|array', // Changé de locality_id à localities[]
+        'localities.*' => 'exists:localities,id', // Valider chaque élément
+        'occupations' => 'required|array', // Changé de occupation_id à occupations[]
+        'occupations.*' => 'exists:occupations,id', // Valider chaque élément
         'legend' => 'required|string',
         'url' => 'nullable|url',
     ]);
@@ -284,14 +286,15 @@ public function createCampaign(Request $request)
             'startdate' => $request->startdate,
             'enddate' => $request->enddate,
             'media_type' => $request->media_type,
-            'locality_id' => $request->locality_id,
-            'occupation_id' => $request->occupation_id,
+            'localities' => $request->localities, // Tableau de localités
+            'occupations' => $request->occupations, // Tableau de professions
             'legend' => $request->legend,
             'url' => $request->url,
             'client_id' => $userId,
             'categories' => $request->categories ?? [],
             'files' => !empty($filesData) ? json_encode($filesData) : null
         ];
+
         
         $result = $this->taskService->createTask($taskData);
         
@@ -309,6 +312,182 @@ public function createCampaign(Request $request)
     } catch (\Exception $e) {
         $alert['type'] = 'danger';
         $alert['message'] = 'Erreur lors de la création de la campagne: ' . $e->getMessage();
+        
+        // Log l'erreur pour le débogage
+        \Log::error('Erreur lors de la création de campagne: ' . $e->getMessage(), [
+            'exception' => $e,
+            'request' => $request->all()
+        ]);
+        
+        return back()->withInput()->with($alert);
+    }
+}
+
+/**
+ * Affiche les détails d'une campagne
+ */
+public function showCampaign($id)
+{
+    $viewData = []; 
+    $alert = []; 
+    $this->setAlert($request, $alert);
+    
+    if (!$this->isConnected()) {
+        $url = URL::route('admin.login', [], true, config('app.url'));
+        return redirect()->to($url)->with($alert);
+    }
+    
+    // Récupérer la campagne avec ses relations
+    $task = Task::with(['localities', 'occupations', 'categories'])->find($id);
+    
+    if (!$task) {
+        $alert['type'] = 'danger';
+        $alert['message'] = 'Campagne introuvable';
+        return redirect()->route('admin.tasks')->with($alert);
+    }
+    
+    // Récupérer les assignations liées à cette tâche
+    $assignments = DB::table('assignments')
+        ->join('users', 'assignments.agent_id', '=', 'users.id')
+        ->where('assignments.task_id', $id)
+        ->select('assignments.*', 'users.firstname as agent_firstname', 'users.lastname as agent_lastname', 'users.email as agent_email')
+        ->get();
+    
+    // Statistiques de la campagne
+    $stats = [
+        'views' => $assignments->sum('vues'),
+        'clicks' => 0, // À implémenter selon votre logique
+        'influencers' => $assignments->count(),
+        'ctr' => '0%' // À calculer selon votre logique
+    ];
+    
+    // Données pour les listes déroulantes du formulaire de modification
+    $viewData['localities'] = DB::table('localities')->where('type', 2)->orderBy('name', 'asc')->get();
+    $viewData['occupations'] = DB::table('occupations')->orderBy('name', 'asc')->get();
+    $viewData['categories'] = DB::table('categories')->orderBy('name', 'asc')->get();
+    
+    return view('admin.campaigns.show', [
+        'task' => $task,
+        'assignments' => $assignments,
+        'stats' => $stats,
+        'viewData' => $viewData,
+        'alert' => $alert,
+        'title' => 'WhatsPAY | Détail Campagne',
+        'version' => gmdate("YmdHis")
+    ]);
+}
+
+/**
+ * Met à jour une campagne existante
+ */
+public function updateCampaign(Request $request, $id)
+{
+    $viewData = []; 
+    $alert = []; 
+    $this->setAlert($request, $alert);
+    
+    if (!$this->isConnected()) {
+        $url = URL::route('admin.login', [], true, config('app.url'));
+        return redirect()->to($url)->with($alert);
+    }
+    
+    // Validation
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'budget' => 'required|numeric|min:1000',
+        'startdate' => 'required|date',
+        'enddate' => 'required|date|after_or_equal:startdate',
+        'media_type' => 'required|string',
+        'localities' => 'required|array',
+        'localities.*' => 'exists:localities,id',
+        'occupations' => 'required|array',
+        'occupations.*' => 'exists:occupations,id',
+        'legend' => 'required|string',
+        'url' => 'nullable|url',
+    ]);
+    
+    try {
+        // Récupérer la tâche existante
+        $task = Task::find($id);
+        
+        if (!$task) {
+            throw new \Exception('Campagne introuvable');
+        }
+        
+        // Gérer les fichiers existants
+        $existingFiles = json_decode($task->files, true) ?: [];
+        $filesToKeep = [];
+        
+        if ($request->has('keep_files') && is_array($request->keep_files)) {
+            foreach ($request->keep_files as $fileIndex) {
+                if (isset($existingFiles[$fileIndex])) {
+                    $filesToKeep[] = $existingFiles[$fileIndex];
+                }
+            }
+        }
+        
+        // Traitement des nouveaux fichiers
+        if ($request->hasFile('new_campaign_files')) {
+            $uploadDir = public_path('uploads/campaigns');
+            
+            // Créer le répertoire s'il n'existe pas
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            foreach ($request->file('new_campaign_files') as $index => $uploadedFile) {
+                // Générer un nom de fichier unique
+                $fileName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', strtolower($uploadedFile->getClientOriginalName()));
+                
+                // Enregistrer le fichier dans le répertoire public
+                $filePath = $uploadedFile->storeAs('campaigns', $fileName, 'public');
+                
+                // Ajouter les informations du fichier à notre tableau
+                $filesToKeep[] = [
+                    'name' => $fileName,
+                    'original_name' => $uploadedFile->getClientOriginalName(),
+                    'mime' => $uploadedFile->getMimeType(),
+                    'size' => $uploadedFile->getSize(),
+                    'path' => 'storage/' . $filePath
+                ];
+            }
+        }
+        
+        // Préparer les données de mise à jour
+        $taskData = [
+            'name' => $request->name,
+            'descriptipon' => $request->description ?? '',
+            'budget' => $request->budget,
+            'startdate' => $request->startdate,
+            'enddate' => $request->enddate,
+            'media_type' => $request->media_type,
+            'url' => $request->url,
+            'legend' => $request->legend,
+            'files' => !empty($filesToKeep) ? json_encode($filesToKeep) : null
+        ];
+        
+        // Appeler le service pour mettre à jour la tâche et ses relations
+        $userId = $request->session()->get('userid');
+        $taskData['client_id'] = $userId; // Pour compatibilité avec le service
+        $taskData['localities'] = $request->localities;
+        $taskData['occupations'] = $request->occupations;
+        $taskData['categories'] = $request->categories ?? [];
+        
+        $result = $this->taskService->updateTask($id, $taskData);
+        
+        if (!$result['success']) {
+            throw new \Exception($result['message']);
+        }
+        
+        $alert['type'] = 'success';
+        $alert['message'] = 'Campagne mise à jour avec succès';
+        
+        return redirect()->route('admin.campaigns.show', $id)->with($alert);
+        
+    } catch (\Exception $e) {
+        $alert['type'] = 'danger';
+        $alert['message'] = 'Erreur lors de la mise à jour de la campagne: ' . $e->getMessage();
+        
         return back()->withInput()->with($alert);
     }
 }

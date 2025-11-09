@@ -4,202 +4,278 @@ namespace App\Services;
 
 use App\Consts\Util;
 use App\Models\Task;
+use App\Models\Category;
+use App\Models\Locality;
+use App\Models\Occupation;
 use App\Traits\Utils;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TaskService
 {
     use Utils;
     
+    /**
+     * Récupère toutes les tâches
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getAllTasks()
     {
-        return DB::select("select * from tasks order by created_at desc");
+        return Task::with(['client'])->orderBy('created_at', 'desc')->get();
     }
     
+    /**
+     * Récupère les tâches d'un client
+     * 
+     * @param string $clientId ID du client
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getClientTasks($clientId)
     {
-        return DB::select("select * from tasks where tasks.client_id = :client_id order by created_at desc", [
-            'client_id' => $clientId
-        ]);
+        return Task::where('client_id', $clientId)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
     
+    /**
+     * Récupère les tâches d'un agent
+     * 
+     * @param string $agentId ID de l'agent
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getAgentTasks($agentId)
     {
-        return DB::select("select
-            tasks.*,
-            assignments.id as assignment_id,
-            assignments.status as assignment_status
-         from assignments 
-         left join tasks on assignments.task_id = tasks.id
-         where assignments.agent_id = :agent_id order by created_at desc", [
-            'agent_id' => $agentId
-        ]);
+        return DB::table('assignments')
+            ->join('tasks', 'assignments.task_id', '=', 'tasks.id')
+            ->where('assignments.agent_id', $agentId)
+            ->select(
+                'tasks.*',
+                'assignments.id as assignment_id',
+                'assignments.status as assignment_status'
+            )
+            ->orderBy('tasks.created_at', 'desc')
+            ->get();
     }
     
+    /**
+     * Récupère une tâche par son ID
+     * 
+     * @param string $id ID de la tâche
+     * @return Task|null
+     */
     public function getTaskById($id)
     {
-        $tasks = DB::select("select * from tasks where id = :id", ['id' => $id]);
-        return count($tasks) > 0 ? $tasks[0] : null;
+        return Task::find($id);
     }
     
+    /**
+     * Récupère une tâche avec toutes ses relations
+     * 
+     * @param string $id ID de la tâche
+     * @return Task|null
+     */
+    public function getTaskWithRelations($id)
+    {
+        return Task::with(['categories', 'localities', 'occupations', 'client'])
+            ->find($id);
+    }
+    
+    /**
+     * Récupère les tâches selon des filtres
+     * 
+     * @param array $filters Filtres à appliquer
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getTasks($filters = [])
     {
-        $query = "select * from tasks where 1=1";
-        $params = [];
+        $query = Task::query();
         
         if (!empty($filters['status'])) {
-            $query .= " and status = :status";
-            $params['status'] = $filters['status'];
+            $query->where('status', $filters['status']);
         }
         
         if (!empty($filters['client_id'])) {
-            $query .= " and client_id = :client_id";
-            $params['client_id'] = $filters['client_id'];
+            $query->where('client_id', $filters['client_id']);
         }
         
         if (!empty($filters['category_id'])) {
-            $query .= " and id in (select task_id from category_task where category_id = :category_id)";
-            $params['category_id'] = $filters['category_id'];
+            $query->whereHas('categories', function($q) use ($filters) {
+                $q->where('categories.id', $filters['category_id']);
+            });
         }
         
-        $query .= " order by created_at desc";
-        
-        return DB::select($query, $params);
-    }
- public function createTask($taskData)
-{
-    $result = [
-        'success' => false,
-        'message' => 'Une erreur est survenue lors de la création de la tâche',
-        'task_id' => null
-    ];
-    
-    try {
-        $processingTransaction = false;
-        DB::beginTransaction();
-        $processingTransaction = true;
-        
-        $taskId = $this->getId();
-        $task = [
-            'id' => $taskId,
-            'name' => $taskData['name'],
-            'descriptipon' => $taskData['descriptipon'],
-            'files' => $taskData['files'],
-            'status' => Util::TASKS_STATUSES["PENDING"],
-            'client_id' => $taskData['client_id'],
-            'validation_date' => null,
-            'validateur_id' => null,
-            'startdate' => $taskData['startdate'],
-            'enddate' => $taskData['enddate'],
-            'budget' => $taskData['budget'],
-            // Nouveaux champs
-            'media_type' => $taskData['media_type'] ?? null,
-            'url' => $taskData['url'] ?? null,
-            'locality_id' => $taskData['locality_id'] ?? null,
-            'occupation_id' => $taskData['occupation_id'] ?? null,
-            'legend' => $taskData['legend'] ?? null
-        ];
-        
-        Task::create($task);
-        
-        // Ajouter les catégories associées
-        if (!empty($taskData['categories'])) {
-            $date = gmdate('Y-m-d H:i:s');
-            foreach ($taskData['categories'] as $categoryId) {
-                DB::table('category_task')->insert([
-                    'category_id' => $categoryId,
-                    'task_id' => $taskId,
-                    'updated_at' => $date,
-                    'created_at' => $date,
-                ]);
-            }
+        if (!empty($filters['start_date'])) {
+            $query->where('startdate', '>=', $filters['start_date']);
         }
         
-        DB::commit();
-        $processingTransaction = false;
-        
-        $result['success'] = true;
-        $result['message'] = 'Tâche créée avec succès';
-        $result['task_id'] = $taskId;
-        
-    } catch (\Exception $e) {
-        if ($processingTransaction) {
-            DB::rollBack();
+        if (!empty($filters['end_date'])) {
+            $query->where('enddate', '<=', $filters['end_date']);
         }
-        $result['message'] = 'Erreur: ' . $e->getMessage();
+        
+        return $query->orderBy('created_at', 'desc')->get();
     }
     
-    return $result;
-}
-
-public function updateTask($id, $taskData)
-{
-    $result = [
-        'success' => false,
-        'message' => 'Une erreur est survenue lors de la mise à jour de la tâche'
-    ];
-    
-    try {
-        $task = $this->getTaskById($id);
-        if (!$task) {
-            $result['message'] = 'Tâche non trouvée';
-            return $result;
-        }
-        
-        $processingTransaction = false;
-        DB::beginTransaction();
-        $processingTransaction = true;
-        
-        $updateData = [
-            'name' => $taskData['name'],
-            'descriptipon' => $taskData['descriptipon'],
-            'files' => $taskData['files'],
-            'startdate' => $taskData['startdate'],
-            'enddate' => $taskData['enddate'],
-            'budget' => $taskData['budget'],
-            // Nouveaux champs
-            'media_type' => $taskData['media_type'] ?? $task->media_type,
-            'url' => $taskData['url'] ?? $task->url,
-            'locality_id' => $taskData['locality_id'] ?? $task->locality_id,
-            'occupation_id' => $taskData['occupation_id'] ?? $task->occupation_id,
-            'legend' => $taskData['legend'] ?? $task->legend
+    /**
+     * Crée une nouvelle tâche
+     * 
+     * @param array $taskData Données de la tâche
+     * @return array Résultat de l'opération
+     */
+    public function createTask($taskData)
+    {
+        $result = [
+            'success' => false,
+            'message' => 'Une erreur est survenue lors de la création de la tâche',
+            'task_id' => null
         ];
         
-        Task::where('id', $id)->update($updateData);
-        
-        // Mettre à jour les catégories si nécessaire
-        if (!empty($taskData['categories'])) {
-            // Supprimer les anciennes relations
-            DB::table('category_task')->where('task_id', $id)->delete();
+        try {
+            DB::beginTransaction();
             
-            // Ajouter les nouvelles relations
-            $date = gmdate('Y-m-d H:i:s');
-            foreach ($taskData['categories'] as $categoryId) {
-                DB::table('category_task')->insert([
-                    'category_id' => $categoryId,
-                    'task_id' => $id,
-                    'updated_at' => $date,
-                    'created_at' => $date,
-                ]);
+            $taskId = $this->getId();
+            
+            // Préparer les données de base de la tâche
+            $task = [
+                'id' => $taskId,
+                'name' => $taskData['name'],
+                'descriptipon' => $taskData['descriptipon'] ?? '',
+                'files' => $taskData['files'] ?? null,
+                'status' => Util::TASKS_STATUSES["PENDING"],
+                'client_id' => $taskData['client_id'],
+                'startdate' => $taskData['startdate'],
+                'enddate' => $taskData['enddate'],
+                'budget' => $taskData['budget'],
+            ];
+            
+            // Ajouter les champs optionnels s'ils existent dans le schéma
+            if (Schema::hasColumn('tasks', 'media_type')) {
+                $task['media_type'] = $taskData['media_type'] ?? null;
             }
-        }
-        
-        DB::commit();
-        $processingTransaction = false;
-        
-        $result['success'] = true;
-        $result['message'] = 'Tâche mise à jour avec succès';
-        
-    } catch (\Exception $e) {
-        if ($processingTransaction) {
+            
+            if (Schema::hasColumn('tasks', 'url')) {
+                $task['url'] = $taskData['url'] ?? null;
+            }
+            
+            if (Schema::hasColumn('tasks', 'legend')) {
+                $task['legend'] = $taskData['legend'] ?? null;
+            }
+            
+            // Créer la tâche
+            $taskModel = Task::create($task);
+            
+            // Associer les catégories
+            if (!empty($taskData['categories'])) {
+                $taskModel->categories()->attach($taskData['categories']);
+            }
+            
+            // Associer les localités
+            if (!empty($taskData['localities'])) {
+                $taskModel->localities()->attach($taskData['localities']);
+            }
+            
+            // Associer les occupations
+            if (!empty($taskData['occupations'])) {
+                $taskModel->occupations()->attach($taskData['occupations']);
+            }
+            
+            DB::commit();
+            
+            $result['success'] = true;
+            $result['message'] = 'Tâche créée avec succès';
+            $result['task_id'] = $taskId;
+            
+        } catch (\Exception $e) {
             DB::rollBack();
+            $result['message'] = 'Erreur: ' . $e->getMessage();
         }
-        $result['message'] = 'Erreur: ' . $e->getMessage();
+        
+        return $result;
     }
     
-    return $result;
-}
+    /**
+     * Met à jour une tâche existante
+     * 
+     * @param string $id ID de la tâche
+     * @param array $taskData Nouvelles données
+     * @return array Résultat de l'opération
+     */
+    public function updateTask($id, $taskData)
+    {
+        $result = [
+            'success' => false,
+            'message' => 'Une erreur est survenue lors de la mise à jour de la tâche'
+        ];
+        
+        try {
+            $task = Task::find($id);
+            
+            if (!$task) {
+                $result['message'] = 'Tâche non trouvée';
+                return $result;
+            }
+            
+            DB::beginTransaction();
+            
+            // Mettre à jour les données de base
+            $updateData = [
+                'name' => $taskData['name'],
+                'descriptipon' => $taskData['descriptipon'] ?? $task->descriptipon,
+                'files' => $taskData['files'] ?? $task->files,
+                'startdate' => $taskData['startdate'],
+                'enddate' => $taskData['enddate'],
+                'budget' => $taskData['budget'],
+            ];
+            
+            // Mettre à jour les champs optionnels
+            if (Schema::hasColumn('tasks', 'media_type')) {
+                $updateData['media_type'] = $taskData['media_type'] ?? $task->media_type;
+            }
+            
+            if (Schema::hasColumn('tasks', 'url')) {
+                $updateData['url'] = $taskData['url'] ?? $task->url;
+            }
+            
+            if (Schema::hasColumn('tasks', 'legend')) {
+                $updateData['legend'] = $taskData['legend'] ?? $task->legend;
+            }
+            
+            $task->update($updateData);
+            
+            // Mettre à jour les catégories
+            if (isset($taskData['categories'])) {
+                $task->categories()->sync($taskData['categories']);
+            }
+            
+            // Mettre à jour les localités
+            if (isset($taskData['localities'])) {
+                $task->localities()->sync($taskData['localities']);
+            }
+            
+            // Mettre à jour les occupations
+            if (isset($taskData['occupations'])) {
+                $task->occupations()->sync($taskData['occupations']);
+            }
+            
+            DB::commit();
+            
+            $result['success'] = true;
+            $result['message'] = 'Tâche mise à jour avec succès';
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $result['message'] = 'Erreur: ' . $e->getMessage();
+        }
+        
+        return $result;
+    }
     
+    /**
+     * Supprime une tâche
+     * 
+     * @param string $id ID de la tâche
+     * @return array Résultat de l'opération
+     */
     public function deleteTask($id)
     {
         $result = [
@@ -208,38 +284,49 @@ public function updateTask($id, $taskData)
         ];
         
         try {
-            $task = $this->getTaskById($id);
+            $task = Task::find($id);
+            
             if (!$task) {
                 $result['message'] = 'Tâche non trouvée';
                 return $result;
             }
             
-            $processingTransaction = false;
             DB::beginTransaction();
-            $processingTransaction = true;
             
-            // Supprimer les relations avec les catégories
-            DB::table('category_task')->where('task_id', $id)->delete();
+            // Détacher toutes les relations
+            $task->categories()->detach();
             
-            // Supprimer la tâche (soft delete)
-            Task::where('id', $id)->delete();
+            if (method_exists($task, 'localities')) {
+                $task->localities()->detach();
+            }
+            
+            if (method_exists($task, 'occupations')) {
+                $task->occupations()->detach();
+            }
+            
+            // Supprimer la tâche (soft delete si le modèle utilise SoftDeletes)
+            $task->delete();
             
             DB::commit();
-            $processingTransaction = false;
             
             $result['success'] = true;
             $result['message'] = 'Tâche supprimée avec succès';
             
         } catch (\Exception $e) {
-            if ($processingTransaction) {
-                DB::rollBack();
-            }
+            DB::rollBack();
             $result['message'] = 'Erreur: ' . $e->getMessage();
         }
         
         return $result;
     }
     
+    /**
+     * Approuve une tâche
+     * 
+     * @param string $id ID de la tâche
+     * @param string $validateurId ID du validateur
+     * @return array Résultat de l'opération
+     */
     public function approveTask($id, $validateurId)
     {
         $result = [
@@ -248,15 +335,16 @@ public function updateTask($id, $taskData)
         ];
         
         try {
-            $task = $this->getTaskById($id);
+            $task = Task::find($id);
+            
             if (!$task) {
                 $result['message'] = 'Tâche non trouvée';
                 return $result;
             }
             
-            Task::where('id', $id)->update([
+            $task->update([
                 'status' => Util::TASKS_STATUSES["APPROVED"],
-                'validation_date' => gmdate('Y-m-d H:i:s'),
+                'validation_date' => now(),
                 'validateur_id' => $validateurId
             ]);
             
@@ -270,6 +358,14 @@ public function updateTask($id, $taskData)
         return $result;
     }
     
+    /**
+     * Rejette une tâche
+     * 
+     * @param string $id ID de la tâche
+     * @param string $validateurId ID du validateur
+     * @param string $reason Motif de rejet
+     * @return array Résultat de l'opération
+     */
     public function rejectTask($id, $validateurId, $reason)
     {
         $result = [
@@ -278,15 +374,16 @@ public function updateTask($id, $taskData)
         ];
         
         try {
-            $task = $this->getTaskById($id);
+            $task = Task::find($id);
+            
             if (!$task) {
                 $result['message'] = 'Tâche non trouvée';
                 return $result;
             }
             
-            Task::where('id', $id)->update([
+            $task->update([
                 'status' => Util::TASKS_STATUSES["REJECTED"],
-                'validation_date' => gmdate('Y-m-d H:i:s'),
+                'validation_date' => now(),
                 'validateur_id' => $validateurId,
                 'rejection_reason' => $reason
             ]);
@@ -301,50 +398,66 @@ public function updateTask($id, $taskData)
         return $result;
     }
     
+    /**
+     * Récupère les statistiques globales des tâches
+     * 
+     * @return array Statistiques
+     */
     public function getTaskStats()
     {
-        // Statistiques globales des tâches
-$stats = [
-    'total' => DB::table('tasks')->count(),
-    'pending' => DB::table('tasks')->where('status', Util::TASKS_STATUSES["PENDING"])->count(),
-    'accepted' => DB::table('tasks')->where('status', Util::TASKS_STATUSES["ACCEPTED"])->count(),
-    'rejected' => DB::table('tasks')->where('status', Util::TASKS_STATUSES["REJECTED"])->count(),
-    'paid' => DB::table('tasks')->where('status', Util::TASKS_STATUSES["PAID"])->count(),
-    'closed' => DB::table('tasks')->where('status', Util::TASKS_STATUSES["CLOSED"])->count(),
-    'total_budget' => DB::table('tasks')->sum('budget'),
-];
-        
-        return $stats;
+        return [
+            'total' => Task::count(),
+            'pending' => Task::where('status', Util::TASKS_STATUSES["PENDING"])->count(),
+            'accepted' => Task::where('status', Util::TASKS_STATUSES["ACCEPTED"])->count(),
+            'rejected' => Task::where('status', Util::TASKS_STATUSES["REJECTED"])->count(),
+            'paid' => Task::where('status', Util::TASKS_STATUSES["PAID"])->count(),
+            'closed' => Task::where('status', Util::TASKS_STATUSES["CLOSED"])->count(),
+            'total_budget' => Task::sum('budget') ?? 0,
+        ];
     }
     
+    /**
+     * Récupère les statistiques des tâches d'un client
+     * 
+     * @param string $clientId ID du client
+     * @return array Statistiques
+     */
     public function getClientTaskStats($clientId)
     {
-        // Statistiques des tâches d'un client
-$stats = [
-    'total' => DB::table('tasks')->where('client_id', $clientId)->count(),
-    'pending' => DB::table('tasks')->where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["PENDING"])->count(),
-    'accepted' => DB::table('tasks')->where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["ACCEPTED"])->count(),
-    'paid' => DB::table('tasks')->where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["PAID"])->count(),
-    'rejected' => DB::table('tasks')->where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["REJECTED"])->count(),
-    'closed' => DB::table('tasks')->where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["CLOSED"])->count(),
-    'total_budget' => DB::table('tasks')->where('client_id', $clientId)->sum('budget'),
-];
-        
-        return $stats;
+        return [
+            'total' => Task::where('client_id', $clientId)->count(),
+            'pending' => Task::where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["PENDING"])->count(),
+            'accepted' => Task::where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["ACCEPTED"])->count(),
+            'paid' => Task::where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["PAID"])->count(),
+            'rejected' => Task::where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["REJECTED"])->count(),
+            'closed' => Task::where('client_id', $clientId)->where('status', Util::TASKS_STATUSES["CLOSED"])->count(),
+            'total_budget' => Task::where('client_id', $clientId)->sum('budget') ?? 0,
+        ];
     }
     
+    /**
+     * Récupère les tâches récentes
+     * 
+     * @param int $limit Nombre de tâches à récupérer
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getRecentTasks($limit = 5)
     {
-        return DB::table('tasks')
-            ->orderBy('created_at', 'desc')
+        return Task::orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
     }
     
+    /**
+     * Récupère les tâches récentes d'un client
+     * 
+     * @param string $clientId ID du client
+     * @param int $limit Nombre de tâches à récupérer
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getRecentClientTasks($clientId, $limit = 5)
     {
-        return DB::table('tasks')
-            ->where('client_id', $clientId)
+        return Task::where('client_id', $clientId)
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
