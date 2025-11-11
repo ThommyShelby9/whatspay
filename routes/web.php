@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\Web\AuthController;
@@ -155,6 +156,17 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 Route::get('/sendmessage/{recipient}', [WhatsAppController::class, 'sendMessage'])->name('send_message');
 Route::get('/sendmessage2/{recipient}/{message?}', [WhatsAppController::class, 'sendMessage2'])->name('send_message2');
 
-// Inclusion des routes spécifiques
+/*
+|--------------------------------------------------------------------------
+| Include Payment Routes
+|--------------------------------------------------------------------------
+*/
+require __DIR__ . '/payment.php';
+
+/*
+|--------------------------------------------------------------------------
+| Include Specific Module Routes
+|--------------------------------------------------------------------------
+*/
 require __DIR__ . '/annonceur.php';
 require __DIR__ . '/influencer.php';

@@ -1,5 +1,6 @@
 <?php
-// File: routes/web/announcer.php
+
+// File: routes/announcer.php (Updated with wallet routes)
 
 use App\Http\Controllers\Web\CampaignController;
 use App\Http\Controllers\Web\InfluencerController;
@@ -40,10 +41,28 @@ Route::middleware(['auth'])->prefix('admin/announcer')->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])
         ->name('announcer.reports.index');
     
-    // Wallet
-    // Existing routes...
-    Route::get('wallet', [WalletController::class, 'index'])->name('announcer.wallet');
-    Route::post('wallet/add-funds', [WalletController::class, 'addFunds'])->name('announcer.wallet.add-funds');
+    // Wallet Management (Enhanced)
+    Route::prefix('wallet')->group(function () {
+        // Main wallet page
+        Route::get('/', [WalletController::class, 'index'])
+            ->name('announcer.wallet');
+        
+        // Add funds (deposit)
+        Route::post('/add-funds', [WalletController::class, 'addFunds'])
+            ->name('announcer.wallet.add-funds');
+        
+        // Payment return handler
+        Route::get('/payment-return', [WalletController::class, 'handlePaymentReturn'])
+            ->name('announcer.wallet.payment-return');
+        
+        // Transaction history (full page)
+        Route::get('/history', [WalletController::class, 'transactionHistory'])
+            ->name('announcer.wallet.history');
+        
+        // API endpoints for AJAX calls
+        Route::get('/stats', [WalletController::class, 'getWalletStats'])
+            ->name('announcer.wallet.stats');
+    });
     
     // Messages
     Route::get('/messages', [MessageController::class, 'index'])
@@ -55,3 +74,4 @@ Route::middleware(['auth'])->prefix('admin/announcer')->group(function () {
     Route::put('/settings', [SettingsController::class, 'update'])
         ->name('announcer.settings.update');
 });
+

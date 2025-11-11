@@ -1,5 +1,6 @@
 <?php
-// File: routes/influencer.php
+
+// File: routes/influencer.php (Updated with earnings routes)
 
 use App\Http\Controllers\Web\Influencer\DashboardController;
 use App\Http\Controllers\Web\Influencer\CampaignController;
@@ -11,13 +12,13 @@ use App\Http\Controllers\Web\Influencer\SettingsController;
 use App\Http\Controllers\Web\Influencer\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
-// Vérifier le profil DIFFUSEUR
+// Influencer routes (all protected by auth middleware and DIFFUSEUR profile check)
 Route::middleware(['auth'])->prefix('admin/influencer')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('influencer.dashboard');
     
-    // Campagnes
+    // Campaigns
     Route::get('/agent/campaigns/available', [CampaignController::class, 'available'])
         ->name('influencer.campaigns.available');
     Route::get('/agent/campaigns/assigned', [CampaignController::class, 'assigned'])
@@ -29,15 +30,30 @@ Route::middleware(['auth'])->prefix('admin/influencer')->group(function () {
     Route::post('/agent/campaigns/{id}/submit', [CampaignController::class, 'storeSubmission'])
         ->name('influencer.campaigns.storeSubmission');
     
-    // Performances
+    // Performance
     Route::get('/agent/performance', [PerformanceController::class, 'index'])
         ->name('influencer.performance');
     
-    // Gains
-    Route::get('/agent/earnings', [EarningController::class, 'index'])
-        ->name('influencer.earnings');
+    // Earnings Management (Enhanced)
+    Route::prefix('agent/earnings')->group(function () {
+        // Main earnings page
+        Route::get('/', [EarningController::class, 'index'])
+            ->name('influencer.earnings');
+        
+        // Withdrawal request
+        Route::post('/withdraw', [EarningController::class, 'requestWithdrawal'])
+            ->name('influencer.earnings.withdraw');
+        
+        // Export earnings data
+        Route::get('/export', [EarningController::class, 'exportEarnings'])
+            ->name('influencer.earnings.export');
+        
+        // API endpoints for AJAX calls
+        Route::get('/chart-data', [EarningController::class, 'apiChartData'])
+            ->name('influencer.earnings.chart-data');
+    });
     
-    // Profil
+    // Profile
     Route::get('/agent/profile', [ProfileController::class, 'index'])
         ->name('influencer.profile');
     Route::put('/agent/profile', [ProfileController::class, 'update'])
@@ -47,19 +63,23 @@ Route::middleware(['auth'])->prefix('admin/influencer')->group(function () {
     Route::get('/agent/messages', [MessageController::class, 'index'])
         ->name('influencer.messages');
     
-    // Paramètres
+    // Settings
     Route::get('/agent/settings', [SettingsController::class, 'index'])
         ->name('influencer.settings');
     Route::put('/agent/settings', [SettingsController::class, 'update'])
         ->name('influencer.settings.update');
     
-    // Configuration WhatsApp
-    Route::get('/agent/whatsapp', [WhatsAppController::class, 'index'])
-        ->name('influencer.whatsapp');
-
-        Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('influencer.whatsapp');
-    Route::post('whatsapp/add', [WhatsAppController::class, 'addPhone'])->name('influencer.whatsapp.add');
-    Route::post('whatsapp/verify', [WhatsAppController::class, 'verifyPhone'])->name('influencer.whatsapp.verify');
-    Route::post('whatsapp/resend', [WhatsAppController::class, 'resendCode'])->name('influencer.whatsapp.resend');
-    Route::delete('whatsapp/delete/{id}', [WhatsAppController::class, 'deletePhone'])->name('influencer.whatsapp.delete');
+    // WhatsApp Configuration
+    Route::prefix('whatsapp')->group(function () {
+        Route::get('/', [WhatsAppController::class, 'index'])
+            ->name('influencer.whatsapp');
+        Route::post('/add', [WhatsAppController::class, 'addPhone'])
+            ->name('influencer.whatsapp.add');
+        Route::post('/verify', [WhatsAppController::class, 'verifyPhone'])
+            ->name('influencer.whatsapp.verify');
+        Route::post('/resend', [WhatsAppController::class, 'resendCode'])
+            ->name('influencer.whatsapp.resend');
+        Route::delete('/delete/{id}', [WhatsAppController::class, 'deletePhone'])
+            ->name('influencer.whatsapp.delete');
+    });
 });

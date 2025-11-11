@@ -1,0 +1,48 @@
+<?php
+
+// File: routes/payment.php
+use App\Http\Controllers\Web\PaymentCallbackController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Payment Routes
+|--------------------------------------------------------------------------
+|
+| Routes for handling PayPlus callbacks and payment pages
+|
+*/
+
+// PayPlus callback routes (public, no authentication required)
+Route::prefix('payment')->group(function () {
+    // Deposit callbacks
+    Route::post('callback/{transaction}', [PaymentCallbackController::class, 'handleDepositCallback'])
+        ->name('payment.callback');
+    
+    // Withdrawal callbacks
+    Route::post('callback/withdrawal/{transaction}', [PaymentCallbackController::class, 'handleWithdrawalCallback'])
+        ->name('payment.callback.withdrawal');
+    
+    // Payment gateway simulation pages (for testing)
+    Route::get('gateway/{transaction}', [PaymentCallbackController::class, 'showPaymentGateway'])
+        ->name('payment.gateway');
+    
+    // Payment instructions page
+    Route::get('instructions/{transaction}', [PaymentCallbackController::class, 'showPaymentInstructions'])
+        ->name('payment.instructions');
+    
+    // Status check endpoint
+    Route::get('status/{transaction}', [PaymentCallbackController::class, 'checkStatus'])
+        ->name('payment.status');
+});
+
+// Protected payment routes
+Route::middleware(['auth'])->prefix('payment')->group(function () {
+    // Transaction history
+    Route::get('history', [PaymentCallbackController::class, 'transactionHistory'])
+        ->name('payment.history');
+    
+    // Transaction details
+    Route::get('transaction/{transaction}', [PaymentCallbackController::class, 'transactionDetails'])
+        ->name('payment.transaction');
+});
