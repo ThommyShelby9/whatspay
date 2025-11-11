@@ -45,7 +45,6 @@
                 </div>
               </div>
               <p class="mt-4 mb-0 text-center">Pas inscrit(e)?<a class="ms-2" href="/admin/registration">Inscrivez vous</a></p>
-              <input type="hidden" name="_token" value="{{ csrf_token() }}" />
             </form>
           </div>
         </div>

@@ -3,7 +3,7 @@
 <!-- Bootstrap js-->
 <script src="/design/admin/assets/js/bootstrap/bootstrap.bundle.min.js"></script>
 <!-- feather icon js-->
-<script src="/design/admin/assets/js/icons/feather-icon/feather.min.js"></script>
+   <script src="{{ asset('design/admin/assets/js/icons/feather-icon/feather.min.js') }}"></script>
 <script src="/design/admin/assets/js/icons/feather-icon/feather-icon.js"></script>
 <!-- scrollbar js-->
 @if($viewData["user"] !== "")
