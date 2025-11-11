@@ -12,6 +12,7 @@
             <div><a class="logo" href="/"><img class="img-fluid for-light" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"><img class="img-fluid for-dark" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"></a></div>
             @include('alert')
             <form class="theme-form" id="login_form" method="post" enctype="multipart/form-data">
+              @csrf
               <h3>Connectez vous</h3>
               <p>Entrez vos identifiants pour vous connecter</p>
               <div class="form-group">

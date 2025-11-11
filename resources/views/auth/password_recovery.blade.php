@@ -12,6 +12,7 @@
             <div><a class="logo" href="/"><img class="img-fluid for-light" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"><img class="img-fluid for-dark" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"></a></div>
             @include('alert')
             <form class="theme-form" id="forgottenpassword_form" method="post" enctype="multipart/form-data">
+              @csrf
               <h3>R&eacute;cup&eacute;ration mot de passe oubli&eacute;</h3>
               <br><span class="rounded-pill badge-danger" style="padding: 5px; color: white; font-weight: bold">&nbsp;&nbsp;{{$viewData["email"]}}&nbsp;&nbsp;</span><br><br>
               <p>Entrez votre nouveau mot de passe</p>

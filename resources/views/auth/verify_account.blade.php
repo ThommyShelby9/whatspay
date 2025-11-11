@@ -13,6 +13,7 @@
             <div><a class="logo text-start" href="/"><img class="img-fluid for-light" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"><img class="img-fluid for-dark" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"></a></div>
             @include('alert')
             <form class="theme-form" id="verify_account_form" action="{{ route('admin.verify_account.post') }}" method="POST">
+              @csrf
               <h4>Vérification de compte</h4>
               <p>Entrez votre email et le code de vérification reçu</p>
               <div class="form-group">

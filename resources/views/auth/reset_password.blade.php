@@ -13,6 +13,7 @@
             <div><a class="logo text-start" href="/"><img class="img-fluid for-light" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"><img class="img-fluid for-dark" src="/design/logo/logo_large.png" alt="looginpage" style="height: 50px; width: 150px;"></a></div>
             @include('alert')
             <form class="theme-form" id="reset_password_form" action="{{ route('admin.reset_password.post') }}" method="POST">
+              @csrf
               <h4>Réinitialisation de mot de passe</h4>
               <p>Entrez votre email, le code reçu et votre nouveau mot de passe</p>
               <div class="form-group">
