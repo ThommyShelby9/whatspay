@@ -97,7 +97,7 @@ class WalletController extends Controller
         
         $this->setViewData($request, $viewData);
         
-        return view('announcer.wallet.index', [
+        return view('annonceur.wallet.index', [
             'alert' => $alert,
             'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
