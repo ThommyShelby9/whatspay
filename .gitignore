@@ -19,7 +19,6 @@
 /storage/framework/testing/*
 /vendor
 .env
-.env.*
 .env.backup
 .env.production
 .phpactor.json
