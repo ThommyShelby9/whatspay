@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Link;
 use App\Services\TrackingService;
 use App\Traits\Utils;
 use Illuminate\Http\Request;
@@ -10,25 +11,27 @@ use Illuminate\Http\Request;
 class TrackingApiController extends Controller
 {
     use Utils;
-    
+
     protected $trackingService;
-    
+
     public function __construct(TrackingService $trackingService)
     {
         $this->trackingService = $trackingService;
     }
-    
-    public function trackClick(Request $request)
+
+    public function trackClick(string $linkId, Request $request)
     {
         try {
-            // Valider l'identifiant du lien
-            $request->validate([
-                'link_id' => 'required',
-            ]);
-            
+            // Vérifier que le lien existe
+            $link = Link::find($linkId);
+
+            if (!$link) {
+                return abort(404, "Link not found");
+            }
+
             // Collecter les données sur le clic
             $clickData = [
-                'link_id' => $request->link_id,
+                'link_id' => $linkId,
                 'user_agent' => $request->header('User-Agent'),
                 'ip' => $request->ip(),
                 'referer' => $request->header('Referer'),
@@ -36,31 +39,14 @@ class TrackingApiController extends Controller
                 'device' => $this->detectDevice($request->header('User-Agent')),
                 'geo_data' => $this->getGeoData($request->ip()),
             ];
-            
+
             // Enregistrer le clic
-            $result = $this->trackingService->recordClick($clickData);
-            
-            if ($result['success']) {
-                // Récupérer l'URL de destination
-                $redirectUrl = $this->trackingService->getRedirectUrl($request->link_id);
-                
-                if ($redirectUrl) {
-                    return response()->json([
-                        'error' => false,
-                        'redirect_url' => $redirectUrl
-                    ], 200);
-                } else {
-                    return response()->json([
-                        'error' => true,
-                        'message' => 'URL de redirection non trouvée'
-                    ], 404);
-                }
-            } else {
-                return response()->json([
-                    'error' => true,
-                    'message' => $result['message']
-                ], 400);
-            }
+            $this->trackingService->recordClick($clickData);
+
+            // Récupérer l'URL de destination
+            $redirectUrl = $this->trackingService->getRedirectUrl($linkId);
+
+            return redirect()->away($redirectUrl);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => true,
@@ -68,12 +54,12 @@ class TrackingApiController extends Controller
             ], 500);
         }
     }
-    
+
     public function getStats(Request $request, $taskId)
     {
         try {
             $stats = $this->trackingService->getTaskStatistics($taskId);
-            
+
             return response()->json([
                 'error' => false,
                 'stats' => $stats
@@ -85,7 +71,7 @@ class TrackingApiController extends Controller
             ], 500);
         }
     }
-    
+
     public function getGlobalStats(Request $request)
     {
         try {
@@ -94,9 +80,9 @@ class TrackingApiController extends Controller
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
             ];
-            
+
             $stats = $this->trackingService->getGlobalStatistics($filters);
-            
+
             return response()->json([
                 'error' => false,
                 'stats' => $stats
@@ -108,7 +94,7 @@ class TrackingApiController extends Controller
             ], 500);
         }
     }
-    
+
     private function detectDevice($userAgent)
     {
         // Logique simplifiée de détection de l'appareil
@@ -120,7 +106,7 @@ class TrackingApiController extends Controller
             return 'desktop';
         }
     }
-    
+
     private function getGeoData($ip)
     {
         // Cette fonction devrait utiliser un service de géolocalisation IP

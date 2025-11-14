@@ -11,39 +11,43 @@ use App\Models\Locality;
 use App\Models\Occupation;
 use App\Services\TaskService;
 use App\Services\AssignmentService;
+use App\Services\TrackingService;
 use App\Traits\Utils;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
     use Utils;
-    
+
     protected $taskService;
     protected $assignmentService;
-    
-    public function __construct(TaskService $taskService, AssignmentService $assignmentService = null)
+    protected $trackingService;
+
+    public function __construct(TaskService $taskService, TrackingService $trackingService, AssignmentService $assignmentService = null)
     {
         $this->taskService = $taskService;
         $this->assignmentService = $assignmentService;
+        $this->trackingService = $trackingService;
     }
-    
+
     /**
      * Affiche la liste des campagnes
      */
     public function tasksGet(Request $request)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $blade = "";
         $tasks = [];
-        
+
         // Récupérer les paramètres de filtre
         $filters = [
             'status' => $request->input('filtre_status'),
@@ -52,19 +56,19 @@ class TaskController extends Controller
             'start_date' => $request->input('filtre_start_date'),
             'end_date' => $request->input('filtre_end_date'),
         ];
-        
+
         // Stocker les valeurs des filtres dans viewData
         foreach ($filters as $key => $value) {
             if (!empty($value)) {
-                $viewData['filtre_'.str_replace('_id', '', $key)] = $value;
+                $viewData['filtre_' . str_replace('_id', '', $key)] = $value;
             }
         }
 
         // Récupérer les campagnes selon le profil de l'utilisateur
         switch ($request->session()->get('userprofile')) {
             case "ADMIN":
-                $tasks = !empty(array_filter($filters)) ? 
-                    $this->taskService->getTasks($filters) : 
+                $tasks = !empty(array_filter($filters)) ?
+                    $this->taskService->getTasks($filters) :
                     $this->taskService->getAllTasks();
                 $blade = "admin_tasks";
                 break;
@@ -81,7 +85,7 @@ class TaskController extends Controller
 
         // Récupérer les statistiques
         $viewData['taskStats'] = $this->taskService->getTaskStats();
-        
+
         // Si c'est un admin, récupérer la liste des clients (annonceurs) pour le filtre
         if ($request->session()->get('userprofile') == "ADMIN") {
             $viewData['clients'] = User::select('users.*')
@@ -93,7 +97,7 @@ class TaskController extends Controller
                 ->orderBy('users.firstname')
                 ->get();
         }
-        
+
         // Récupérer les catégories pour le filtre
         $viewData['categories'] = Category::where('enabled', true)
             ->orderBy('name')
@@ -101,28 +105,28 @@ class TaskController extends Controller
 
         $viewData["tasks"] = $tasks;
         $this->setViewData($request, $viewData);
-        
+
         return view('admin.' . $blade, [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Campagnes', 
-            'pagetilte' => 'Campagnes', 
+            'title' => 'WhatsPAY | Campagnes',
+            'pagetilte' => 'Campagnes',
             'pagecardtilte' => 'Liste des campagnes',
         ]);
     }
-    
+
     /**
      * Affiche le formulaire d'une campagne (nouveau ou existant)
      */
     public function taskGet(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $viewData["title"] = "Nouvelle campagne";
@@ -132,6 +136,7 @@ class TaskController extends Controller
         $viewData["categories"] = Category::where('enabled', true)->orderBy('name')->get();
         $viewData["localities"] = Locality::where('type', 2)->orderBy('name')->get();
         $viewData["occupations"] = Occupation::where('enabled', true)->orderBy('name')->get();
+        $viewData["stats"] = $this->trackingService->getTaskStatistics($id);
 
         // Selon l'ID, on affiche un nouveau formulaire ou une campagne existante
         switch ($id) {
@@ -149,7 +154,7 @@ class TaskController extends Controller
                     $viewData["task"] = $task;
                     $viewData["title"] = "Détails de la campagne";
                     $viewData["subtitle"] = "Informations relatives à la campagne";
-                    
+
                     // Récupérer les assignations liées à cette campagne
                     if ($this->assignmentService) {
                         $viewData["assignments"] = $this->assignmentService->getAssignmentsByTasks([$id]);
@@ -160,34 +165,103 @@ class TaskController extends Controller
                 break;
         }
 
+        // S'assurer que les statistiques par appareil existent
+        if (!isset($viewData["stats"]["devices"]) || !is_array($viewData["stats"]["devices"])) {
+            $viewData["stats"]["devices"] = [
+                "desktop" => 0,
+                "mobile" => 0,
+                "tablet" => 0,
+                "unknown" => 0
+            ];
+        }
+
+        // Valeurs par défaut pour les métriques avancées
+        $viewData["stats"]["total_views"] = $viewData["stats"]["total_views"] ?? 0;
+        $viewData["stats"]["unique_clicks"] = $viewData["stats"]["unique_clicks"] ?? 0;
+        $viewData["stats"]["click_rate"] = $viewData["stats"]["click_rate"] ?? 0;
+        $viewData["stats"]["conversion_rate"] = $viewData["stats"]["conversion_rate"] ?? 0;
+        $viewData["stats"]["avg_time"] = $viewData["stats"]["avg_time"] ?? 0;
+        $viewData["stats"]["engagement_rate"] = $viewData["stats"]["engagement_rate"] ?? 0;
+        $viewData["stats"]["geography"] = $viewData["stats"]["geography"] ?? [];
+
+        // DAILY DATA (évolution des vues & clics)
+        if (
+            isset($viewData["stats"]["daily_data"]) &&
+            is_array($viewData["stats"]["daily_data"])
+        ) {
+            $daily = $viewData["stats"]["daily_data"];
+
+            $viewData["stats"]["daily_data"] = [
+                "dates"  => $daily["dates"]  ?? [],
+                "views"  => $daily["views"]  ?? [],
+                "clicks" => $daily["clicks"] ?? [],
+            ];
+        } else {
+            // Si pas de données → tableau vide (pas de fallback aléatoire)
+            $viewData["stats"]["daily_data"] = [
+                "dates"  => [],
+                "views"  => [],
+                "clicks" => [],
+            ];
+        }
+
+        // WEEKDAY DATA (répartition par jour de la semaine)
+        if (
+            isset($viewData["stats"]["weekday_data"]) &&
+            is_array($viewData["stats"]["weekday_data"])
+        ) {
+            $weekday = $viewData["stats"]["weekday_data"];
+
+            // Réorganisation propre selon l'ordre standard
+            $viewData["stats"]["weekday_data"] = [
+                "Lun" => $weekday["Lun"] ?? 0,
+                "Mar" => $weekday["Mar"] ?? 0,
+                "Mer" => $weekday["Mer"] ?? 0,
+                "Jeu" => $weekday["Jeu"] ?? 0,
+                "Ven" => $weekday["Ven"] ?? 0,
+                "Sam" => $weekday["Sam"] ?? 0,
+                "Dim" => $weekday["Dim"] ?? 0,
+            ];
+        } else {
+            $viewData["stats"]["weekday_data"] = [
+                "Lun" => 0,
+                "Mar" => 0,
+                "Mer" => 0,
+                "Jeu" => 0,
+                "Ven" => 0,
+                "Sam" => 0,
+                "Dim" => 0,
+            ];
+        }
+
         $this->setViewData($request, $viewData);
-        
+
         // Déterminer la vue à utiliser (nouvelle campagne ou détails)
         $view = ($id === "new") ? 'admin.campaigns.create' : 'admin.campaigns.show';
-        
-// Dans la méthode taskGet du TaskController
-return view($view, [
-    'alert' => $alert, 
-    'viewData' => $viewData, 
-    'task' => $viewData["task"],  // Ajoutez cette ligne
-    'version' => gmdate("YmdHis"),
-    'title' => 'WhatsPAY | Admin', 
-    'pagetilte' => $viewData["title"], 
-    'pagecardtilte' => '',
-]);
+
+        // Dans la méthode taskGet du TaskController
+        return view($view, [
+            'alert' => $alert,
+            'viewData' => $viewData,
+            'task' => $viewData["task"],  // Ajoutez cette ligne
+            'version' => gmdate("YmdHis"),
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => $viewData["title"],
+            'pagecardtilte' => '',
+        ]);
     }
-    
+
     /**
      * Traite le formulaire de campagne (création ou mise à jour)
      */
     public function taskPost(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         // Validation différente selon type de formulaire (ancien ou nouveau)
@@ -206,22 +280,22 @@ return view($view, [
                 'legend' => 'required|string',
                 'url' => 'nullable|url',
             ]);
-            
+
             try {
                 // Traitement des fichiers médias
                 $filesData = [];
-                
+
                 if ($request->hasFile('campaign_files')) {
                     $uploadDir = public_path('uploads/campaigns');
-                    
+
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0755, true);
                     }
-                    
+
                     foreach ($request->file('campaign_files') as $index => $uploadedFile) {
                         $fileName = time() . '_' . $index . '_' . preg_replace('/\s+/', '_', strtolower($uploadedFile->getClientOriginalName()));
                         $filePath = $uploadedFile->storeAs('campaigns', $fileName, 'public');
-                        
+
                         $filesData[] = [
                             'name' => $fileName,
                             'original_name' => $uploadedFile->getClientOriginalName(),
@@ -231,7 +305,7 @@ return view($view, [
                         ];
                     }
                 }
-                
+
                 // Préparation des données de la campagne
                 $taskData = [
                     'name' => $request->name,
@@ -248,33 +322,31 @@ return view($view, [
                     'occupations' => $request->occupations,
                     'files' => !empty($filesData) ? json_encode($filesData) : null
                 ];
-                
+
                 if ($id == 'new') {
                     $result = $this->taskService->createTask($taskData);
                 } else {
                     $result = $this->taskService->updateTask($id, $taskData);
                 }
-                
+
                 if (!$result['success']) {
                     throw new \Exception($result['message']);
                 }
-                
+
                 $alert = [
                     'message' => ($id == 'new') ? 'Campagne créée avec succès' : 'Campagne mise à jour avec succès',
                     'type' => 'success'
                 ];
-                
+
                 return redirect()->route('admin.tasks')->with($alert);
-                
             } catch (\Exception $e) {
                 $alert = [
                     'message' => 'Erreur: ' . $e->getMessage(),
                     'type' => 'danger'
                 ];
-                
+
                 return redirect()->back()->withInput()->with($alert);
             }
-            
         } else {
             // Ancien formulaire (compatibilité)
             $request->validate([
@@ -324,30 +396,30 @@ return view($view, [
                     'message' => $result['message'],
                     'type' => 'success'
                 ];
-                return redirect(config('app.url').'/admin/tasks')->with($alert);
+                return redirect(config('app.url') . '/admin/tasks')->with($alert);
             } else {
                 $alert = [
                     'message' => $result['message'],
                     'type' => 'danger'
                 ];
-                
+
                 // En cas d'erreur, recharger la page avec les données
                 return $this->taskGet($request, $id);
             }
         }
     }
-    
+
     /**
      * Approuve une campagne
      */
     public function approveTask(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $result = $this->taskService->approveTask($id, $request->session()->get('userid'));
@@ -364,25 +436,25 @@ return view($view, [
             ];
         }
 
-        return redirect(config('app.url').'/admin/tasks')->with($alert);
+        return redirect(config('app.url') . '/admin/tasks')->with($alert);
     }
-    
+
     /**
      * Rejette une campagne
      */
     public function rejectTask(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $result = $this->taskService->rejectTask(
-            $id, 
-            $request->session()->get('userid'), 
+            $id,
+            $request->session()->get('userid'),
             $request->rejection_reason ?? $request->reason
         );
 
@@ -398,20 +470,20 @@ return view($view, [
             ];
         }
 
-        return redirect(config('app.url').'/admin/tasks')->with($alert);
+        return redirect(config('app.url') . '/admin/tasks')->with($alert);
     }
-    
+
     /**
      * Supprime une campagne
      */
     public function deleteTask(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $result = $this->taskService->deleteTask($id);
@@ -428,7 +500,7 @@ return view($view, [
             ];
         }
 
-        return redirect(config('app.url').'/admin/tasks')->with($alert);
+        return redirect(config('app.url') . '/admin/tasks')->with($alert);
     }
 
     /**
@@ -441,14 +513,14 @@ return view($view, [
     public function getTaskAssignments(Request $request, $id)
     {
         $task = $this->taskService->getTaskById($id);
-        
+
         if (!$task) {
             return response()->json([
                 'success' => false,
                 'message' => 'Campagne non trouvée'
             ]);
         }
-        
+
         // Vérifier que la tâche appartient à l'utilisateur actuel (si c'est un annonceur)
         if ($request->session()->get('userprofile') === 'ANNONCEUR' && $task->client_id !== $request->session()->get('userid')) {
             return response()->json([
@@ -456,16 +528,16 @@ return view($view, [
                 'message' => 'Vous n\'êtes pas autorisé à accéder à cette campagne'
             ]);
         }
-        
+
         $assignments = $this->assignmentService->getAssignmentsByTasks([$id]);
-        
+
         return response()->json([
             'success' => true,
             'task' => $task,
             'assignments' => $assignments
         ]);
     }
-    
+
     private function isConnected()
     {
         return (\Auth::viaRemember() || \Auth::check());

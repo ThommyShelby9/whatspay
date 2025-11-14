@@ -34,30 +34,38 @@ class Task extends Model
         'type',
         'url',
         'text',
-        'schedule'
+        'schedule',
+        //Nouveaux champs
+        'media_type',
+        'locality_id',
+        'occupation_id',
+        'legend',
+        'task_id',
+        'budget_reserved_at',
+        'budget_released_at'
     ];
 
-        /**
+    /**
      * Relation avec les localités
      */
-// Dans App\Models\Task
-public function categories()
-{
-    return $this->belongsToMany(Category::class);
-}
+    // Dans App\Models\Task
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class);
+    }
 
-public function localities()
-{
-    return $this->belongsToMany(Locality::class);
-}
+    public function localities()
+    {
+        return $this->belongsToMany(Locality::class);
+    }
 
-public function occupations()
-{
-    return $this->belongsToMany(Occupation::class);
-}
+    public function occupations()
+    {
+        return $this->belongsToMany(Occupation::class);
+    }
 
-public function client()
-{
-    return $this->belongsTo(User::class, 'client_id');
-}
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
 }

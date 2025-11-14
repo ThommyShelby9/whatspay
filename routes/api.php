@@ -23,10 +23,10 @@ Route::post('whatsapp/validatecode', [WhatsAppApiController::class, 'whatsappVal
 // Routes protégées
 Route::middleware('auth:sanctum')->group(function () {
     // Tracking
-    Route::post('/track-click', [TrackingApiController::class, 'trackClick'])->name('api.track_click');
+
     Route::get('/stats/{taskId}', [TrackingApiController::class, 'getStats'])->name('api.get_stats');
     Route::get('/global-stats', [TrackingApiController::class, 'getGlobalStats'])->name('api.get_global_stats');
-    
+
     // Media
     Route::get('/media/{id}', [MediaApiController::class, 'getMedia'])->name('api.get_media');
     Route::delete('/media/{id}', [MediaApiController::class, 'deleteMedia'])->name('api.delete_media');
@@ -37,12 +37,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('tasks', TaskApiController::class);
     Route::post('/tasks/{id}/approve', [TaskApiController::class, 'approve'])->name('api.task.approve');
     Route::post('/tasks/{id}/reject', [TaskApiController::class, 'reject'])->name('api.task.reject');
-    
+
     // Assignments
     Route::apiResource('assignments', AssignmentApiController::class);
     Route::post('/assignments/{id}/submit', [AssignmentApiController::class, 'submit'])->name('api.assignment.submit');
     Route::get('/tasks/{taskId}/available-agents', [AssignmentApiController::class, 'getAvailableAgents'])->name('api.task.available_agents');
-    
+
     // Users
     Route::apiResource('users', UserApiController::class);
     Route::post('/users/{id}/toggle-status', [UserApiController::class, 'toggleStatus'])->name('api.user.toggle_status');
