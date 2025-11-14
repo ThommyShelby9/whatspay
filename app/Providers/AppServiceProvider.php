@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\DirectWhatsAppService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL; // Ajout de l'import URL
 
@@ -13,7 +14,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+                $this->app->singleton(DirectWhatsAppService::class, function ($app) {
+            return new DirectWhatsAppService();
+        });
     }
 
     /**

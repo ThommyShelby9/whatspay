@@ -8,6 +8,8 @@ use App\Http\Controllers\Web\TaskController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WhatsAppController;
 use App\Http\Controllers\Web\Admin\DashboardAdminController;
+use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
+
 use Illuminate\Support\Facades\Route;
 
 // Redirection vers la page de login
@@ -146,6 +148,16 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
     Route::get('/finance', [App\Http\Controllers\Web\Admin\FinanceAdminController::class, 'index'])->name('admin.finance');
     Route::get('/finance/transactions', [App\Http\Controllers\Web\Admin\FinanceAdminController::class, 'transactions'])->name('admin.finance.transactions');
     Route::post('/finance/transactions/{id}/validate', [App\Http\Controllers\Web\Admin\FinanceAdminController::class, 'validatePayment'])->name('admin.finance.validate');
+});
+
+// File: routes/web.php (add these routes)
+
+// Admin WhatsApp messaging routes
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::get('/whatsapp-messaging', [WhatsAppMessagingController::class, 'index'])
+        ->name('admin.whatsapp_messaging');
+    Route::post('/whatsapp-messaging/send', [WhatsAppMessagingController::class, 'sendMassMessage'])
+        ->name('admin.whatsapp_messaging.send');
 });
 
 /*

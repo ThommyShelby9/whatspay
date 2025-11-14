@@ -107,66 +107,103 @@ class WalletController extends Controller
         ]);
     }
     
-    public function addFunds(Request $request)
-    {
-        try {
-            $userId = $request->session()->get('userid');
-            
-            // Validation des données
-            $request->validate([
-                'payment_method' => 'required|string',
-                'amount' => 'required|numeric|min:1000|max:1000000',
-                'phone' => 'required|string|regex:/^[0-9]{8,15}$/',
-            ], [
-                'amount.min' => 'Le montant minimum est de 1 000 FCFA',
-                'amount.max' => 'Le montant maximum est de 1 000 000 FCFA',
-                'phone.required' => 'Le numéro de téléphone est requis',
-                'phone.regex' => 'Format de numéro de téléphone invalide',
+   public function addFunds(Request $request)
+{
+    try {
+        $userId = $request->session()->get('userid');
+        
+        \Log::info('=== DÉBUT DEPOT ===', [
+            'user_id' => $userId,
+            'request_data' => $request->all()
+        ]);
+        
+        // Validation des données
+        $request->validate([
+            'payment_method' => 'required|string',
+            'amount' => 'required|numeric|min:1000|max:1000000',
+            'phone' => 'required|string|regex:/^[0-9]{8,15}$/',
+        ], [
+            'amount.min' => 'Le montant minimum est de 1 000 FCFA',
+            'amount.max' => 'Le montant maximum est de 1 000 000 FCFA',
+            'phone.required' => 'Le numéro de téléphone est requis',
+            'phone.regex' => 'Format de numéro de téléphone invalide',
+        ]);
+        
+        \Log::info('Validation OK');
+        
+        // Nettoyer le numéro de téléphone
+        $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
+        if (!str_starts_with($phone, '225')) {
+            $phone = '225' . $phone;
+        }
+        
+        \Log::info('Téléphone nettoyé', ['phone' => $phone]);
+        
+        // Vérifier si PaymentService existe
+        if (!$this->paymentService) {
+            \Log::error('PaymentService non initialisé');
+            throw new \Exception('Service de paiement non disponible');
+        }
+        
+        \Log::info('PaymentService OK, appel initiateDeposit...');
+        
+        // Initier le dépôt via PayPlus
+        $result = $this->paymentService->initiateDeposit(
+            $userId,
+            $request->input('amount'),
+            $phone,
+            true
+        );
+        
+        \Log::info('Résultat PaymentService', $result);
+        
+        if ($result['success']) {
+            session([
+                'pending_deposit' => [
+                    'transaction_id' => $result['transaction_id'],
+                    'amount' => $request->input('amount'),
+                    'phone' => $phone
+                ]
             ]);
             
-            // Nettoyer le numéro de téléphone
-            $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
-            if (!str_starts_with($phone, '225')) {
-                $phone = '225' . $phone;
-            }
+            \Log::info('Redirection vers PayPlus', ['url' => $result['redirect_url']]);
             
-            // Initier le dépôt via PayPlus
-            $result = $this->paymentService->initiateDeposit(
-                $userId,
-                $request->input('amount'),
-                $phone,
-                true
-            );
+            return redirect()->away($result['redirect_url']);
+        } else {
+            \Log::warning('Échec PaymentService', $result);
             
-            if ($result['success']) {
-                session([
-                    'pending_deposit' => [
-                        'transaction_id' => $result['transaction_id'],
-                        'amount' => $request->input('amount'),
-                        'phone' => $phone
-                    ]
-                ]);
-                
-                return redirect()->away($result['redirect_url']);
-            } else {
-                return redirect()->route('announcer.wallet')
-                    ->with('type', 'danger')
-                    ->with('message', $result['message']);
-            }
-            
-        } catch (ValidationException $e) {
-            return redirect()->route('announcer.wallet')
-                ->withErrors($e->errors())
-                ->withInput()
-                ->with('type', 'danger')
-                ->with('message', 'Veuillez corriger les erreurs dans le formulaire');
-                
-        } catch (\Exception $e) {
             return redirect()->route('announcer.wallet')
                 ->with('type', 'danger')
-                ->with('message', 'Une erreur est survenue. Veuillez réessayer.');
+                ->with('message', $result['message']);
         }
+        
+    } catch (ValidationException $e) {
+        \Log::error('Erreur validation', $e->errors());
+        
+        return redirect()->route('announcer.wallet')
+            ->withErrors($e->errors())
+            ->withInput()
+            ->with('type', 'danger')
+            ->with('message', 'Veuillez corriger les erreurs dans le formulaire');
+            
+    } catch (\Exception $e) {
+        \Log::error('ERREUR GENERALE DEPOT', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        // En mode développement, afficher l'erreur réelle
+        $errorMessage = config('app.debug') ? 
+            'ERREUR DEBUG: ' . $e->getMessage() . ' (Ligne ' . $e->getLine() . ')' :
+            'Une erreur est survenue. Veuillez réessayer.';
+        
+        return redirect()->route('announcer.wallet')
+            ->with('type', 'danger')
+            ->with('message', $errorMessage);
     }
+}
     
     /**
      * Traiter le retour après paiement PayPlus

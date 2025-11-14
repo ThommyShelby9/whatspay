@@ -1,4 +1,3 @@
-<!-- File: resources/views/influencer/whatsapp/index.blade.php -->
 @extends('admin.layout')
 
 @section('pagecontent')
@@ -161,7 +160,7 @@
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <h5>Vérifier votre numéro</h5>
-                  <p class="text-muted mb-0">Saisissez le code de vérification reçu par SMS ou WhatsApp pour confirmer votre numéro.</p>
+                  <p class="text-muted mb-0">Saisissez le code de vérification reçu sur WhatsApp pour confirmer votre numéro.</p>
                 </div>
               </div>
             </div>
@@ -229,35 +228,39 @@
           
           <div class="alert alert-info">
             <small>
-              Un code de vérification sera envoyé par SMS à ce numéro. Assurez-vous que WhatsApp est installé et activé sur ce numéro.
+              Un code de vérification sera envoyé sur votre WhatsApp. Assurez-vous que WhatsApp est bien installé et activé sur ce numéro.
             </small>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-        <button type="submit" class="btn btn-primary" form="addPhoneForm">Ajouter le numéro</button>
+        <button type="submit" class="btn btn-primary" id="addPhoneSubmit" form="addPhoneForm">Ajouter le numéro</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Modal Vérifier un numéro -->
-<div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Vérifier votre numéro</h5>
+        <h5 class="modal-title">Vérifier votre numéro WhatsApp</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div id="verification-status-messages">
+          <!-- Les messages de statut seront insérés ici par JavaScript -->
+        </div>
+        
         <form id="verifyForm" method="post" action="{{ route('influencer.whatsapp.verify') }}">
           @csrf
           
           <input type="hidden" name="phone_id" id="verify-phone-id">
           
           <div class="mb-3">
-            <label class="form-label">Code de vérification</label>
+            <label class="form-label">Code de vérification reçu sur WhatsApp</label>
             <div class="verification-code-input">
               <input type="text" maxlength="1" class="form-control code-input" data-index="1">
               <input type="text" maxlength="1" class="form-control code-input" data-index="2">
@@ -282,7 +285,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-        <button type="submit" class="btn btn-primary" form="verifyForm">Vérifier</button>
+        <button type="submit" class="btn btn-primary" id="verifySubmit" form="verifyForm">Vérifier</button>
       </div>
     </div>
   </div>
@@ -303,16 +306,92 @@
     height: 50px;
     padding: 0;
   }
+  
+  .btn-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    border: 0.125em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+  }
+  
+  @keyframes spinner-border {
+    to { transform: rotate(360deg); }
+  }
+  
+  #verification-status-messages .alert {
+    margin-bottom: 15px;
+  }
 </style>
 @endpush
 
 @push('scripts')
 <script>
   $(document).ready(function() {
+    // Ajout d'un spinner lors de la soumission du formulaire d'ajout
+    $('#addPhoneForm').on('submit', function() {
+      $('#addPhoneSubmit').prop('disabled', true);
+      $('#addPhoneSubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Traitement...');
+    });
+    
+    // Vérifier automatiquement l'état d'envoi du code après ajout de numéro
+    @if(session('phone_id'))
+      var phoneId = "{{ session('phone_id') }}";
+      
+      // Afficher immédiatement le modal de vérification
+      $(document).ready(function() {
+        // Ouvrir le modal
+        $('#verifyModal').modal('show');
+        
+        // Définir l'ID du téléphone
+        $('#verify-phone-id').val(phoneId);
+        
+        // Afficher un message d'attente
+        $('#verification-status-messages').html(`
+          <div class="alert alert-info">
+            <i class="fa fa-info-circle me-2"></i>
+            Veuillez patienter pendant l'envoi du code via WhatsApp...
+          </div>
+        `);
+        
+        // Focus sur le premier champ après un court délai
+        setTimeout(() => {
+          $('.code-input:first').focus();
+        }, 500);
+        
+        // Afficher un message d'aide après 30 secondes
+        setTimeout(() => {
+          if ($('#verification-code').val().length === 0) {
+            $('#verification-status-messages').html(`
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle me-2"></i>
+                <strong>Vous n'avez pas reçu le code?</strong>
+                <ul class="mb-0 mt-2">
+                  <li>Vérifiez que WhatsApp est bien installé sur votre téléphone</li>
+                  <li>Vérifiez que votre numéro est correct</li>
+                  <li>Essayez de cliquer sur "Renvoyer le code"</li>
+                </ul>
+              </div>
+            `);
+            
+            // Activer le bouton de renvoi
+            $('#resendCode').prop('disabled', false);
+            $('#timer').text('');
+          }
+        }, 30000);
+      });
+    @endif
+    
     // Verify number modal
     $('.verify-number').click(function() {
       const phoneId = $(this).data('id');
       $('#verify-phone-id').val(phoneId);
+      
+      // Réinitialiser les messages de statut
+      $('#verification-status-messages').empty();
       
       // Start timer
       let seconds = 59;
@@ -348,6 +427,13 @@
       });
       
       $('#verification-code').val(code);
+      
+      // Si le code est complet, activer le bouton de vérification
+      if (code.length === 6) {
+        $('#verifySubmit').prop('disabled', false);
+      } else {
+        $('#verifySubmit').prop('disabled', true);
+      }
     });
     
     $('.code-input').on('keydown', function(e) {
@@ -365,8 +451,17 @@
     $('#resendCode').click(function() {
       const phoneId = $('#verify-phone-id').val();
       
-      // Disable button and reset timer
+      // Désactiver le bouton et ajouter un indicateur de chargement
       $(this).prop('disabled', true);
+      $(this).html('<i class="fa fa-spinner fa-spin"></i> Envoi en cours...');
+      
+      // Afficher un message d'attente
+      $('#verification-status-messages').html(`
+        <div class="alert alert-info">
+          <i class="fa fa-info-circle me-2"></i>
+          Envoi d'un nouveau code en cours...
+        </div>
+      `);
       
       // AJAX call to resend code
       $.ajax({
@@ -378,10 +473,18 @@
         },
         success: function(response) {
           if (response.success) {
-            alert('Code renvoyé avec succès');
+            // Afficher un message de succès
+            $('#verification-status-messages').html(`
+              <div class="alert alert-success">
+                <i class="fa fa-check-circle me-2"></i>
+                Code renvoyé avec succès. Veuillez vérifier votre WhatsApp.
+              </div>
+            `);
             
             // Reset timer
             let seconds = 59;
+            $('#resendCode').html('Renvoyer le code');
+            
             const timerInterval = setInterval(function() {
               if (seconds <= 0) {
                 clearInterval(timerInterval);
@@ -392,16 +495,54 @@
                 $('#timer').text(`00:${seconds.toString().padStart(2, '0')}`);
               }
             }, 1000);
+            
+            // Focus sur le premier champ
+            $('.code-input:first').focus();
           } else {
-            alert('Une erreur est survenue lors du renvoi du code');
+            // Afficher un message d'erreur
+            $('#verification-status-messages').html(`
+              <div class="alert alert-danger">
+                <i class="fa fa-exclamation-circle me-2"></i>
+                ${response.message || 'Une erreur est survenue lors du renvoi du code'}
+              </div>
+            `);
             $('#resendCode').prop('disabled', false);
+            $('#resendCode').html('Renvoyer le code');
           }
         },
-        error: function() {
-          alert('Une erreur est survenue lors du renvoi du code');
+        error: function(xhr) {
+          // Afficher un message d'erreur
+          $('#verification-status-messages').html(`
+            <div class="alert alert-danger">
+              <i class="fa fa-exclamation-circle me-2"></i>
+              Erreur de connexion. Veuillez réessayer.
+            </div>
+          `);
           $('#resendCode').prop('disabled', false);
+          $('#resendCode').html('Renvoyer le code');
         }
       });
+    });
+    
+    // Validation et soumission du formulaire
+    $('#verifyForm').on('submit', function() {
+      const code = $('#verification-code').val();
+      
+      if (code.length < 6) {
+        $('#verification-status-messages').html(`
+          <div class="alert alert-danger">
+            <i class="fa fa-exclamation-circle me-2"></i>
+            Veuillez saisir un code de vérification à 6 chiffres.
+          </div>
+        `);
+        return false;
+      }
+      
+      // Afficher un indicateur de chargement
+      $('#verifySubmit').prop('disabled', true);
+      $('#verifySubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Vérification...');
+      
+      return true;
     });
   });
 </script>
