@@ -196,6 +196,21 @@ Route::get('/test-login', function () {
         <button type="submit">Login Direct (sans JS)</button>
     </form>';
 });
+
+// Route de debug pour voir les middlewares actifs
+Route::get('/debug-middlewares', function () {
+    $router = app('router');
+    $routes = $router->getRoutes();
+    
+    foreach ($routes as $route) {
+        if ($route->uri() === 'admin/login') {
+            return [
+                'middlewares' => $route->middleware(),
+                'action' => $route->getAction(),
+            ];
+        }
+    }
+});
 /*
 |--------------------------------------------------------------------------
 | Include Payment Routes
