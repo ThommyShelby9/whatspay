@@ -9,6 +9,8 @@ use App\Http\Controllers\Web\TaskController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WhatsAppController;
 use App\Http\Controllers\Web\Admin\DashboardAdminController;
+use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
+
 use Illuminate\Support\Facades\Route;
 
 // Redirection vers la page de login
@@ -151,6 +153,15 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 
 //Enrégistrer un clic
 Route::get('/track/{id}', [TrackingApiController::class, 'trackClick'])->name('api.track_click');
+// File: routes/web.php (add these routes)
+
+// Admin WhatsApp messaging routes
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::get('/whatsapp-messaging', [WhatsAppMessagingController::class, 'index'])
+        ->name('admin.whatsapp_messaging');
+    Route::post('/whatsapp-messaging/send', [WhatsAppMessagingController::class, 'sendMassMessage'])
+        ->name('admin.whatsapp_messaging.send');
+});
 
 /*
 |--------------------------------------------------------------------------

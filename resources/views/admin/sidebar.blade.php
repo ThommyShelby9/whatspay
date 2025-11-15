@@ -47,6 +47,13 @@
               <!-- li><a  href="/admin/assignments">Soumissions</a></li -->
             </ul>
           </li>
+          <!-- Add this to your admin navigation menu -->
+<li class="sidebar-list">
+  <a class="sidebar-link sidebar-title" href="{{ route('admin.whatsapp_messaging') }}">
+    <i class="fab fa-whatsapp"></i>
+    <span class="lan-3">Messages WhatsApp</span>
+  </a>
+</li>
           @endif
 
 @if($viewData["userprofile"] == "ANNONCEUR")

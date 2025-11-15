@@ -9,6 +9,8 @@ use App\Traits\Utils;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
+
 use Carbon\Carbon;
 
 class PaymentService
@@ -47,31 +49,88 @@ class PaymentService
      * @param bool $useRedirect Whether to use redirect flow or straight flow
      * @return array Result including success status, message, and redirect URL
      */
+
+    /**
+     * Initiate deposit for announcer (Version Debug)
+     */
     public function initiateDeposit($userId, $amount, $customerPhone, $useRedirect = true)
     {
+        Log::info('=== DÉBUT initiateDeposit ===', [
+            'userId' => $userId,
+            'amount' => $amount,
+            'customerPhone' => $customerPhone,
+            'useRedirect' => $useRedirect,
+        ]);
+        
         try {
             // Validation
-            if ($amount < 1000) { // Minimum 1000 XOF
+            if ($amount < 1000) {
+                Log::warning('Montant trop faible', ['amount' => $amount]);
                 return [
                     'success' => false,
                     'message' => 'Le montant minimum de dépôt est de 1000 FCFA'
                 ];
             }
             
+            Log::info('Validation montant OK');
+            
+            // Vérification des configurations PayPlus
+            if (!$this->payPlusApiKey || !$this->payPlusApiToken) {
+                Log::error('Configuration PayPlus manquante', [
+                    'has_api_key' => !empty($this->payPlusApiKey),
+                    'has_token' => !empty($this->payPlusApiToken)
+                ]);
+                
+                if (config('app.debug')) {
+                    return [
+                        'success' => false,
+                        'message' => 'Configuration PayPlus manquante - Vérifiez PAYPLUS_API_KEY et PAYPLUS_API_TOKEN dans .env'
+                    ];
+                }
+            }
+            
             // Create payment transaction record
             $transactionId = $this->getId();
             $externalId = 'DEP-' . time() . '-' . substr($transactionId, 0, 8);
             
+            Log::info('Création transaction', [
+                'transaction_id' => $transactionId,
+                'external_id' => $externalId
+            ]);
+            
+            // Vérifier si la table payment_transactions existe
+            if (!\Schema::hasTable('payment_transactions')) {
+                Log::error('Table payment_transactions manquante');
+                
+                if (config('app.debug')) {
+                    return [
+                        'success' => false,
+                        'message' => 'Table payment_transactions manquante - Exécutez les migrations'
+                    ];
+                } else {
+                    throw new \Exception('Configuration de base de données incomplète');
+                }
+            }
+            
+            // Vérifier si la route callback existe
+            try {
+                $callbackUrl = route('payment.callback', ['transaction' => $transactionId]);
+                Log::info('Callback URL générée', ['url' => $callbackUrl]);
+            } catch (\Exception $e) {
+                Log::error('Erreur génération callback URL', ['error' => $e->getMessage()]);
+                $callbackUrl = config('app.url') . '/payment/callback/' . $transactionId;
+            }
+            
             $paymentTransaction = PaymentTransaction::create([
                 'id' => $transactionId,
                 'user_id' => $userId,
-                'payment_method_id' => null, // Will be updated based on user choice
+                'payment_method_id' => null,
                 'amount' => $amount,
                 'currency' => 'XOF',
                 'status' => 'PENDING',
                 'reference' => $externalId,
                 'expires_at' => Carbon::now()->addHour(),
-                'callback_url' => route('payment.callback', ['transaction' => $transactionId]),
+                'callback_url' => $callbackUrl,
                 'payload' => json_encode([
                     'type' => 'deposit',
                     'user_id' => $userId,
@@ -79,6 +138,8 @@ class PaymentService
                     'phone' => $customerPhone
                 ])
             ]);
+            
+            Log::info('Transaction créée en DB', ['id' => $paymentTransaction->id]);
             
             // Prepare PayPlus payload
             $payload = [
@@ -110,7 +171,7 @@ class PaymentService
                     'actions' => [
                         'cancel_url' => route('announcer.wallet') . '?status=cancelled',
                         'return_url' => route('announcer.wallet') . '?status=success',
-                        'callback_url' => route('payment.callback', ['transaction' => $transactionId]),
+                        'callback_url' => $callbackUrl,
                         'callback_url_method' => 'post_json'
                     ],
                     'custom_data' => [
@@ -120,25 +181,50 @@ class PaymentService
                 ]
             ];
             
+            Log::info('Payload PayPlus préparé', $payload);
+            
             // Choose endpoint based on flow type
             $endpoint = $useRedirect ? 
                 '/pay/v01/redirect/checkout-invoice/create' : 
                 '/pay/v01/straight/checkout-invoice/create';
+                
+            $fullUrl = $this->payPlusBaseUrl . $endpoint;
+            
+            Log::info('Appel PayPlus API', [
+                'url' => $fullUrl,
+                'endpoint' => $endpoint,
+                'has_token' => !empty($this->payPlusApiToken),
+                'has_api_key' => !empty($this->payPlusApiKey)
+            ]);
             
             // Call PayPlus API
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->payPlusApiToken,
                 'Apikey' => $this->payPlusApiKey,
                 'Content-Type' => 'application/json'
-            ])->post($this->payPlusBaseUrl . $endpoint, $payload);
+            ])->post($fullUrl, $payload);
+            
+            Log::info('Réponse PayPlus', [
+                'status' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $response->body(),
+                'headers' => $response->headers()
+            ]);
             
             if ($response->successful()) {
                 $responseData = $response->json();
                 
-                if ($responseData['response_code'] === '00') {
+                Log::info('Réponse PayPlus décodée', $responseData);
+                
+                if (isset($responseData['response_code']) && $responseData['response_code'] === '00') {
                     // Update transaction with PayPlus token
                     $paymentTransaction->update([
                         'gateway_response' => json_encode($responseData)
+                    ]);
+                    
+                    Log::info('Succès PayPlus', [
+                        'redirect_url' => $responseData['response_text'] ?? 'N/A',
+                        'token' => $responseData['token'] ?? 'N/A'
                     ]);
                     
                     return [
@@ -146,33 +232,57 @@ class PaymentService
                         'message' => 'Redirection vers la passerelle de paiement',
                         'redirect_url' => $responseData['response_text'],
                         'transaction_id' => $transactionId,
-                        'token' => $responseData['token']
+                        'token' => $responseData['token'] ?? null
                     ];
                 } else {
                     // Payment initiation failed
+                    Log::error('Échec PayPlus', $responseData);
+                    
                     $paymentTransaction->update([
                         'status' => 'FAILED',
                         'gateway_response' => json_encode($responseData)
                     ]);
                     
+                    $errorMessage = $responseData['description'] ?? 'Erreur lors de l\'initialisation du paiement';
+                    
+                    if (config('app.debug')) {
+                        $errorMessage .= ' (Code: ' . ($responseData['response_code'] ?? 'N/A') . ')';
+                    }
+                    
                     return [
                         'success' => false,
-                        'message' => $responseData['description'] ?? 'Erreur lors de l\'initialisation du paiement'
+                        'message' => $errorMessage
                     ];
                 }
             } else {
-                throw new \Exception('Erreur de communication avec PayPlus: ' . $response->status());
+                $errorDetail = 'HTTP ' . $response->status() . ' - ' . $response->body();
+                Log::error('Erreur HTTP PayPlus', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                throw new \Exception('Erreur de communication avec PayPlus: ' . $errorDetail);
             }
             
         } catch (\Exception $e) {
-            Log::error('PayPlus deposit error: ' . $e->getMessage());
+            Log::error('Exception dans initiateDeposit', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $errorMessage = config('app.debug') ? 
+                'Erreur PayPlus: ' . $e->getMessage() :
+                'Une erreur est survenue. Veuillez réessayer.';
             
             return [
                 'success' => false,
-                'message' => 'Une erreur est survenue. Veuillez réessayer.'
+                'message' => $errorMessage
             ];
         }
     }
+    
     
     /**
      * Initiate withdrawal for influencer
