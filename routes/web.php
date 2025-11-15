@@ -187,6 +187,15 @@ Route::get('/debug-session', function () {
         ]
     ]);
 });
+
+Route::get('/test-login', function () {
+    return '<form method="POST" action="/admin/login">
+        ' . csrf_field() . '
+        <input type="email" name="email" value="admin@lapieuvre.tech" required>
+        <input type="password" name="password" value="zsedrftgyhuji" required>
+        <button type="submit">Login Direct (sans JS)</button>
+    </form>';
+});
 /*
 |--------------------------------------------------------------------------
 | Include Payment Routes

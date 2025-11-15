@@ -1,3 +1,10 @@
+// Configuration globale CSRF pour jQuery
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+
 let uploadedFiles = [];
 
 var localities = "";
@@ -1106,6 +1113,7 @@ if (
   window.location.pathname.startsWith("/admin/task")
 ) {
   $(document).ready(function () {
+    
     // Initialize tooltips
     $('[data-bs-toggle="tooltip"]').tooltip();
 
