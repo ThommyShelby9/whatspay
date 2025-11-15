@@ -170,7 +170,23 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 */
 Route::get('/sendmessage/{recipient}', [WhatsAppController::class, 'sendMessage'])->name('send_message');
 Route::get('/sendmessage2/{recipient}/{message?}', [WhatsAppController::class, 'sendMessage2'])->name('send_message2');
-
+// Route de debug temporaire
+// routes/web.php - debug temporaire
+Route::get('/debug-session', function () {
+    return response()->json([
+        'csrf_token' => csrf_token(),
+        'session_id' => session()->getId(),
+        'session_token' => session()->token(),
+        'session_regenerated' => session()->regenerateToken(),
+        'trusted_proxies' => config('trustedproxy.proxies'),
+        'request_scheme' => request()->getScheme(),
+        'headers' => [
+            'x-forwarded-proto' => request()->header('X-Forwarded-Proto'),
+            'x-forwarded-host' => request()->header('X-Forwarded-Host'),
+            'host' => request()->header('Host'),
+        ]
+    ]);
+});
 /*
 |--------------------------------------------------------------------------
 | Include Payment Routes
