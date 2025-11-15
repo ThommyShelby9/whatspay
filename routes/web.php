@@ -12,6 +12,10 @@ use App\Http\Controllers\Web\Admin\DashboardAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+
 
 // Redirection vers la page de login
 Route::get('/login', function () {
@@ -173,19 +177,58 @@ Route::get('/sendmessage2/{recipient}/{message?}', [WhatsAppController::class, '
 // Route de debug temporaire
 // routes/web.php - debug temporaire
 Route::get('/debug-session', function () {
-    return response()->json([
-        'csrf_token' => csrf_token(),
-        'session_id' => session()->getId(),
-        'session_token' => session()->token(),
-        'session_regenerated' => session()->regenerateToken(),
-        'trusted_proxies' => config('trustedproxy.proxies'),
-        'request_scheme' => request()->getScheme(),
-        'headers' => [
-            'x-forwarded-proto' => request()->header('X-Forwarded-Proto'),
-            'x-forwarded-host' => request()->header('X-Forwarded-Host'),
-            'host' => request()->header('Host'),
-        ]
-    ]);
+    try {
+        // Test de connexion à la base de données
+        $dbConnected = DB::connection()->getPdo() ? true : false;
+
+        // Vérifier si la table sessions existe
+        $sessionsTableExists = Schema::hasTable('sessions');
+
+        // Compter les sessions
+        $sessionsCount = $sessionsTableExists ? DB::table('sessions')->count() : 'N/A';
+
+        return response()->json([
+            'status' => 'OK',
+            'database' => [
+                'connected' => $dbConnected,
+                'sessions_table_exists' => $sessionsTableExists,
+                'sessions_count' => $sessionsCount,
+            ],
+            'session' => [
+                'driver' => config('session.driver'),
+                'csrf_token' => csrf_token(),
+                'session_id' => session()->getId(),
+                'session_token' => session()->token(),
+                'domain' => config('session.domain'),
+                'secure' => config('session.secure'),
+                'lifetime' => config('session.lifetime'),
+                'same_site' => config('session.same_site'),
+            ],
+            'request' => [
+                'scheme' => request()->getScheme(),
+                'is_secure' => request()->isSecure(),
+                'url' => request()->url(),
+                'full_url' => request()->fullUrl(),
+            ],
+            'headers' => [
+                'x-forwarded-proto' => request()->header('X-Forwarded-Proto'),
+                'x-forwarded-host' => request()->header('X-Forwarded-Host'),
+                'x-forwarded-port' => request()->header('X-Forwarded-Port'),
+                'x-forwarded-for' => request()->header('X-Forwarded-For'),
+                'host' => request()->header('Host'),
+            ],
+            'cookies' => [
+                'session_cookie_name' => config('session.cookie'),
+                'cookies_received' => array_keys(request()->cookies->all()),
+            ],
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'ERROR',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
 });
 
 Route::get('/test-login', function () {
