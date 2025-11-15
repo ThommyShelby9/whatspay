@@ -240,6 +240,74 @@ Route::get('/test-login', function () {
     </form>';
 });
 
+// Route de test PayPlus API
+Route::get('/test-payplus', function () {
+    $baseUrl = config('payplus.base_url');
+    $apiKey = config('payplus.api_key');
+    $apiToken = config('payplus.api_token');
+
+    $results = [];
+
+    // Test 1: Ping base URL
+    try {
+        $response = Http::timeout(10)->get($baseUrl);
+        $results['base_url_test'] = [
+            'url' => $baseUrl,
+            'status' => $response->status(),
+            'success' => $response->successful(),
+            'body' => substr($response->body(), 0, 500)
+        ];
+    } catch (\Exception $e) {
+        $results['base_url_test'] = [
+            'url' => $baseUrl,
+            'error' => $e->getMessage()
+        ];
+    }
+
+    // Test 2: Test endpoints communs
+    $endpoints = [
+        '/pay/v01/redirect/checkout-invoice/create',
+        '/api/v01/redirect/checkout-invoice/create',
+        '/v01/redirect/checkout-invoice/create',
+        '/checkout-invoice/create',
+    ];
+
+    foreach ($endpoints as $endpoint) {
+        $fullUrl = $baseUrl . $endpoint;
+        try {
+            $response = Http::timeout(5)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiToken,
+                    'Apikey' => $apiKey,
+                    'Content-Type' => 'application/json'
+                ])
+                ->post($fullUrl, [
+                    'test' => 'ping'
+                ]);
+
+            $results['endpoints'][$endpoint] = [
+                'status' => $response->status(),
+                'success' => $response->successful(),
+                'body' => substr($response->body(), 0, 200)
+            ];
+        } catch (\Exception $e) {
+            $results['endpoints'][$endpoint] = [
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    $results['config'] = [
+        'base_url' => $baseUrl,
+        'has_api_key' => !empty($apiKey),
+        'has_token' => !empty($apiToken),
+        'api_key_length' => strlen($apiKey),
+        'token_length' => strlen($apiToken)
+    ];
+
+    return response()->json($results, 200, [], JSON_PRETTY_PRINT);
+});
+
 // Route de debug pour voir les middlewares actifs
 Route::get('/debug-middlewares', function () {
     $router = app('router');
