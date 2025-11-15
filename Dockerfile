@@ -48,9 +48,10 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY . .
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 
-# Set permissions
+# Set permissions - IMPORTANT pour Laravel
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
 
 # Create startup script
 COPY docker/start.sh /start.sh
