@@ -19,12 +19,14 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
+ /**
      * Bootstrap any application services.
      */
     public function boot(): void
     {
-        //
-
+        // Forcer HTTPS en production et avec proxies
+        if (env('APP_ENV') === 'production' || request()->header('X-Forwarded-Proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
 }
