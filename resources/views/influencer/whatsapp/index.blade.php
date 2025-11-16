@@ -241,7 +241,7 @@
   </div>
 </div>
 
-<!-- Modal Vérifier un numéro -->
+<!-- Modal Vérifier un numéro - Version améliorée -->
 <div class="modal fade" id="verifyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -254,30 +254,48 @@
           <!-- Les messages de statut seront insérés ici par JavaScript -->
         </div>
         
+        <div class="text-center mb-4">
+          <p class="text-muted mb-2">Saisissez le code à 6 chiffres envoyé sur WhatsApp</p>
+        </div>
+        
         <form id="verifyForm" method="post" action="{{ route('influencer.whatsapp.verify') }}">
           @csrf
           
           <input type="hidden" name="phone_id" id="verify-phone-id">
           
-          <div class="mb-3">
-            <label class="form-label">Code de vérification reçu sur WhatsApp</label>
-            <div class="verification-code-input">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="1">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="2">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="3">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="4">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="5">
-              <input type="text" maxlength="1" class="form-control code-input" data-index="6">
-            </div>
-            <input type="hidden" name="verification_code" id="verification-code">
-          </div>
+<div class="mb-4">
+  <label class="form-label text-muted mb-2">Code de vérification reçu sur WhatsApp</label>
+  
+  <div class="text-center mt-3">
+    <div class="d-inline-flex gap-2 flex-nowrap justify-content-center">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="0" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="1" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="2" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="3" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="4" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+      <input type="text" maxlength="1" class="form-control code-input text-center" data-index="5" 
+             style="width: 45px !important; height: 55px !important; font-size: 1.4rem !important; border-radius: 8px;">
+    </div>
+  </div>
+  
+  <input type="hidden" name="verification_code" id="verification-code">
+</div>
           
           <div class="text-center mb-3">
-            <span id="timer" class="text-muted">00:59</span>
+            <div class="timer-container">
+              <i class="fas fa-clock text-muted me-1"></i>
+              <span id="timer" class="timer-display">01:00</span>
+            </div>
           </div>
           
           <div class="text-center">
-            <button type="button" class="btn btn-link" id="resendCode" disabled>
+            <button type="button" class="btn btn-link text-decoration-none" id="resendCode" disabled>
+              <i class="fas fa-paper-plane me-1"></i>
               Renvoyer le code
             </button>
           </div>
@@ -285,7 +303,10 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-        <button type="submit" class="btn btn-primary" id="verifySubmit" form="verifyForm">Vérifier</button>
+        <button type="submit" class="btn btn-primary" id="verifySubmit" form="verifyForm" disabled>
+          <i class="fas fa-check me-1"></i>
+          Vérifier
+        </button>
       </div>
     </div>
   </div>
@@ -293,258 +314,579 @@
 
 @push('styles')
 <style>
+/* Styles pour le conteneur de vérification */
+.verification-code-container {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.verification-code-input {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Styles pour les champs individuels */
+.code-input {
+  width: 50px !important;
+  height: 60px !important;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* États des champs */
+.code-input:focus {
+  border-color: #0d6efd;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  transform: translateY(-1px);
+}
+
+.code-input:hover:not(:focus) {
+  border-color: #adb5bd;
+  background-color: #ffffff;
+}
+
+.code-input.filled {
+  border-color: #198754;
+  background-color: #f8fff9;
+  color: #198754;
+}
+
+.code-input.error {
+  border-color: #dc3545;
+  background-color: #fff8f8;
+  color: #dc3545;
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Animation de secousse pour les erreurs */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Animation de validation */
+.code-input.success {
+  border-color: #198754;
+  background-color: #d1e7dd;
+  animation: pulse-success 0.6s ease;
+}
+
+@keyframes pulse-success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Style du timer */
+.timer-container {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f8f9fa;
+  border-radius: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.timer-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #495057;
+}
+
+.timer-display.warning {
+  color: #fd7e14;
+}
+
+.timer-display.danger {
+  color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 576px) {
   .verification-code-input {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
   }
   
-  .verification-code-input input {
-    text-align: center;
-    font-size: 20px;
-    width: 50px;
-    height: 50px;
-    padding: 0;
+  .code-input {
+    width: 40px !important;
+    height: 50px !important;
+    font-size: 1.3rem;
   }
-  
-  .btn-spinner {
-    display: inline-block;
-    width: 1em;
-    height: 1em;
-    vertical-align: middle;
-    border: 0.125em solid currentColor;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: spinner-border 0.75s linear infinite;
-  }
-  
-  @keyframes spinner-border {
-    to { transform: rotate(360deg); }
-  }
-  
-  #verification-status-messages .alert {
-    margin-bottom: 15px;
-  }
+}
+
+/* Style pour le bouton de renvoi */
+#resendCode:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#resendCode:not(:disabled):hover {
+  color: #0d6efd !important;
+}
+
+/* Loading state pour le bouton de vérification */
+#verifySubmit.loading {
+  position: relative;
+  color: transparent !important;
+}
+
+#verifySubmit.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Anciens styles conservés pour compatibilité */
+.btn-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+  border: 0.125em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+#verification-status-messages .alert {
+  margin-bottom: 15px;
+}
 </style>
 @endpush
 
 @push('scripts')
 <script>
-  $(document).ready(function() {
-    // Ajout d'un spinner lors de la soumission du formulaire d'ajout
-    $('#addPhoneForm').on('submit', function() {
-      $('#addPhoneSubmit').prop('disabled', true);
-      $('#addPhoneSubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Traitement...');
-    });
+$(document).ready(function() {
+  // Initialiser la gestion des codes de vérification
+  initVerificationCode();
+  
+  // Ajout d'un spinner lors de la soumission du formulaire d'ajout
+  $('#addPhoneForm').on('submit', function() {
+    $('#addPhoneSubmit').prop('disabled', true);
+    $('#addPhoneSubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Traitement...');
+  });
+  
+  // Vérifier automatiquement l'état d'envoi du code après ajout de numéro
+  @if(session('phone_id'))
+    var phoneId = "{{ session('phone_id') }}";
     
-    // Vérifier automatiquement l'état d'envoi du code après ajout de numéro
-    @if(session('phone_id'))
-      var phoneId = "{{ session('phone_id') }}";
+    // Afficher immédiatement le modal de vérification
+    $(document).ready(function() {
+      // Ouvrir le modal
+      $('#verifyModal').modal('show');
       
-      // Afficher immédiatement le modal de vérification
-      $(document).ready(function() {
-        // Ouvrir le modal
-        $('#verifyModal').modal('show');
-        
-        // Définir l'ID du téléphone
-        $('#verify-phone-id').val(phoneId);
-        
-        // Afficher un message d'attente
-        $('#verification-status-messages').html(`
-          <div class="alert alert-info">
-            <i class="fa fa-info-circle me-2"></i>
-            Veuillez patienter pendant l'envoi du code via WhatsApp...
-          </div>
-        `);
-        
-        // Focus sur le premier champ après un court délai
-        setTimeout(() => {
-          $('.code-input:first').focus();
-        }, 500);
-        
-        // Afficher un message d'aide après 30 secondes
-        setTimeout(() => {
-          if ($('#verification-code').val().length === 0) {
-            $('#verification-status-messages').html(`
-              <div class="alert alert-warning">
-                <i class="fa fa-exclamation-triangle me-2"></i>
-                <strong>Vous n'avez pas reçu le code?</strong>
-                <ul class="mb-0 mt-2">
-                  <li>Vérifiez que WhatsApp est bien installé sur votre téléphone</li>
-                  <li>Vérifiez que votre numéro est correct</li>
-                  <li>Essayez de cliquer sur "Renvoyer le code"</li>
-                </ul>
-              </div>
-            `);
-            
-            // Activer le bouton de renvoi
-            $('#resendCode').prop('disabled', false);
-            $('#timer').text('');
-          }
-        }, 30000);
-      });
-    @endif
-    
-    // Verify number modal
-    $('.verify-number').click(function() {
-      const phoneId = $(this).data('id');
+      // Définir l'ID du téléphone
       $('#verify-phone-id').val(phoneId);
-      
-      // Réinitialiser les messages de statut
-      $('#verification-status-messages').empty();
-      
-      // Start timer
-      let seconds = 59;
-      const timerInterval = setInterval(function() {
-        if (seconds <= 0) {
-          clearInterval(timerInterval);
-          $('#resendCode').prop('disabled', false);
-          $('#timer').text('');
-        } else {
-          seconds--;
-          $('#timer').text(`00:${seconds.toString().padStart(2, '0')}`);
-        }
-      }, 1000);
-      
-      // Reset code inputs
-      $('.code-input').val('');
-      $('.code-input:first').focus();
-    });
-    
-    // Verification code input
-    $('.code-input').on('input', function() {
-      const index = parseInt($(this).data('index'));
-      const value = $(this).val();
-      
-      if (value && index < 6) {
-        $(`.code-input[data-index="${index + 1}"]`).focus();
-      }
-      
-      // Update hidden input with full code
-      let code = '';
-      $('.code-input').each(function() {
-        code += $(this).val();
-      });
-      
-      $('#verification-code').val(code);
-      
-      // Si le code est complet, activer le bouton de vérification
-      if (code.length === 6) {
-        $('#verifySubmit').prop('disabled', false);
-      } else {
-        $('#verifySubmit').prop('disabled', true);
-      }
-    });
-    
-    $('.code-input').on('keydown', function(e) {
-      if (e.key === 'Backspace') {
-        const index = parseInt($(this).data('index'));
-        const value = $(this).val();
-        
-        if (!value && index > 1) {
-          $(`.code-input[data-index="${index - 1}"]`).focus();
-        }
-      }
-    });
-    
-    // Resend code
-    $('#resendCode').click(function() {
-      const phoneId = $('#verify-phone-id').val();
-      
-      // Désactiver le bouton et ajouter un indicateur de chargement
-      $(this).prop('disabled', true);
-      $(this).html('<i class="fa fa-spinner fa-spin"></i> Envoi en cours...');
       
       // Afficher un message d'attente
       $('#verification-status-messages').html(`
         <div class="alert alert-info">
           <i class="fa fa-info-circle me-2"></i>
-          Envoi d'un nouveau code en cours...
+          Veuillez patienter pendant l'envoi du code via WhatsApp...
         </div>
       `);
       
-      // AJAX call to resend code
-      $.ajax({
-        url: "{{ route('influencer.whatsapp.resend') }}",
-        type: "POST",
-        data: {
-          _token: "{{ csrf_token() }}",
-          phone_id: phoneId
-        },
-        success: function(response) {
-          if (response.success) {
-            // Afficher un message de succès
-            $('#verification-status-messages').html(`
-              <div class="alert alert-success">
-                <i class="fa fa-check-circle me-2"></i>
-                Code renvoyé avec succès. Veuillez vérifier votre WhatsApp.
-              </div>
-            `);
-            
-            // Reset timer
-            let seconds = 59;
-            $('#resendCode').html('Renvoyer le code');
-            
-            const timerInterval = setInterval(function() {
-              if (seconds <= 0) {
-                clearInterval(timerInterval);
-                $('#resendCode').prop('disabled', false);
-                $('#timer').text('');
-              } else {
-                seconds--;
-                $('#timer').text(`00:${seconds.toString().padStart(2, '0')}`);
-              }
-            }, 1000);
-            
-            // Focus sur le premier champ
-            $('.code-input:first').focus();
-          } else {
-            // Afficher un message d'erreur
-            $('#verification-status-messages').html(`
-              <div class="alert alert-danger">
-                <i class="fa fa-exclamation-circle me-2"></i>
-                ${response.message || 'Une erreur est survenue lors du renvoi du code'}
-              </div>
-            `);
-            $('#resendCode').prop('disabled', false);
-            $('#resendCode').html('Renvoyer le code');
-          }
-        },
-        error: function(xhr) {
+      // Afficher un message d'aide après 30 secondes
+      setTimeout(() => {
+        if ($('#verification-code').val().length === 0) {
+          $('#verification-status-messages').html(`
+            <div class="alert alert-warning">
+              <i class="fa fa-exclamation-triangle me-2"></i>
+              <strong>Vous n'avez pas reçu le code?</strong>
+              <ul class="mb-0 mt-2">
+                <li>Vérifiez que WhatsApp est bien installé sur votre téléphone</li>
+                <li>Vérifiez que votre numéro est correct</li>
+                <li>Essayez de cliquer sur "Renvoyer le code"</li>
+              </ul>
+            </div>
+          `);
+          
+          // Activer le bouton de renvoi
+          $('#resendCode').prop('disabled', false);
+          $('#timer').text('');
+        }
+      }, 30000);
+    });
+  @endif
+  
+  // Verify number modal
+  $('.verify-number').click(function() {
+    const phoneId = $(this).data('id');
+    $('#verify-phone-id').val(phoneId);
+    
+    // Réinitialiser les messages de statut
+    $('#verification-status-messages').empty();
+  });
+});
+
+function initVerificationCode() {
+  const codeInputs = $('.code-input');
+  const hiddenCodeInput = $('#verification-code');
+  const verifyButton = $('#verifySubmit');
+  const resendButton = $('#resendCode');
+  let timer = null;
+  let timeLeft = 60; // 60 secondes
+  
+  // Initialiser les événements pour chaque champ
+  codeInputs.each(function(index) {
+    const input = $(this);
+    
+    // Événement de saisie
+    input.on('input', function(e) {
+      handleInput(e, index);
+    });
+    
+    // Événement de touches spéciales
+    input.on('keydown', function(e) {
+      handleKeydown(e, index);
+    });
+    
+    // Événement de collage
+    input.on('paste', function(e) {
+      handlePaste(e, index);
+    });
+    
+    // Focus et blur pour les animations
+    input.on('focus', function() {
+      this.select();
+    });
+    
+    input.on('blur', function() {
+      if (this.value) {
+        $(this).addClass('filled');
+      } else {
+        $(this).removeClass('filled');
+      }
+    });
+  });
+  
+  // Gérer la saisie
+  function handleInput(e, index) {
+    const input = $(e.target);
+    const value = input.val();
+    
+    // Permettre seulement les chiffres
+    if (!/^\d*$/.test(value)) {
+      input.val('');
+      showInputError(input);
+      return;
+    }
+    
+    // Si un chiffre est saisi
+    if (value.length === 1) {
+      input.addClass('filled');
+      input.removeClass('error');
+      
+      // Passer au champ suivant
+      if (index < codeInputs.length - 1) {
+        codeInputs.eq(index + 1).focus();
+      }
+    }
+    
+    updateHiddenInput();
+    updateVerifyButton();
+  }
+  
+  // Gérer les touches spéciales
+  function handleKeydown(e, index) {
+    const input = $(e.target);
+    
+    switch(e.key) {
+      case 'Backspace':
+        if (input.val() === '' && index > 0) {
+          // Revenir au champ précédent
+          codeInputs.eq(index - 1).focus();
+          codeInputs.eq(index - 1).val('');
+          codeInputs.eq(index - 1).removeClass('filled');
+        } else {
+          input.removeClass('filled error');
+        }
+        updateHiddenInput();
+        updateVerifyButton();
+        break;
+        
+      case 'ArrowLeft':
+        if (index > 0) {
+          codeInputs.eq(index - 1).focus();
+        }
+        e.preventDefault();
+        break;
+        
+      case 'ArrowRight':
+        if (index < codeInputs.length - 1) {
+          codeInputs.eq(index + 1).focus();
+        }
+        e.preventDefault();
+        break;
+        
+      case 'Delete':
+        input.val('');
+        input.removeClass('filled error');
+        updateHiddenInput();
+        updateVerifyButton();
+        break;
+    }
+  }
+  
+  // Gérer le collage de code complet
+  function handlePaste(e, index) {
+    e.preventDefault();
+    const pastedText = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
+    const digits = pastedText.replace(/\D/g, '').slice(0, 6);
+    
+    if (digits.length === 6) {
+      // Remplir tous les champs
+      digits.split('').forEach((digit, i) => {
+        if (i < codeInputs.length) {
+          codeInputs.eq(i).val(digit);
+          codeInputs.eq(i).addClass('filled');
+          codeInputs.eq(i).removeClass('error');
+        }
+      });
+      
+      // Focuser le dernier champ
+      codeInputs.eq(codeInputs.length - 1).focus();
+      
+      updateHiddenInput();
+      updateVerifyButton();
+    }
+  }
+  
+  // Mettre à jour le champ caché
+  function updateHiddenInput() {
+    let code = '';
+    codeInputs.each(function() {
+      code += $(this).val();
+    });
+    hiddenCodeInput.val(code);
+  }
+  
+  // Mettre à jour le bouton de vérification
+  function updateVerifyButton() {
+    let code = '';
+    codeInputs.each(function() {
+      code += $(this).val();
+    });
+    verifyButton.prop('disabled', code.length !== 6);
+  }
+  
+  // Afficher une erreur de saisie
+  function showInputError(input) {
+    input.addClass('error');
+    setTimeout(() => {
+      input.removeClass('error');
+    }, 500);
+  }
+  
+  // Démarrer le timer
+  function startTimer() {
+    const timerDisplay = $('#timer');
+    resendButton.prop('disabled', true);
+    
+    timer = setInterval(function() {
+      timeLeft--;
+      
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      timerDisplay.text(formattedTime);
+      
+      // Changer la couleur selon le temps restant
+      if (timeLeft <= 10) {
+        timerDisplay.addClass('danger');
+        timerDisplay.removeClass('warning');
+      } else if (timeLeft <= 30) {
+        timerDisplay.addClass('warning');
+        timerDisplay.removeClass('danger');
+      } else {
+        timerDisplay.removeClass('warning danger');
+      }
+      
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        resendButton.prop('disabled', false);
+        timerDisplay.text("00:00");
+      }
+    }, 1000);
+  }
+  
+  // Afficher erreur sur tous les champs
+  function showAllInputsError() {
+    codeInputs.each(function() {
+      $(this).addClass('error');
+    });
+    
+    setTimeout(() => {
+      codeInputs.each(function() {
+        $(this).removeClass('error');
+      });
+    }, 500);
+  }
+  
+  // Gestion des événements du modal
+  $('#verifyModal').on('shown.bs.modal', function() {
+    // Reset au début
+    codeInputs.each(function() {
+      $(this).val('');
+      $(this).removeClass('filled error success');
+    });
+    
+    updateHiddenInput();
+    updateVerifyButton();
+    
+    // Démarrer le timer
+    timeLeft = 60;
+    startTimer();
+    
+    // Focuser le premier champ avec un léger délai
+    setTimeout(() => {
+      codeInputs.eq(0).focus();
+    }, 300);
+  });
+  
+  $('#verifyModal').on('hidden.bs.modal', function() {
+    if (timer) {
+      clearInterval(timer);
+    }
+    verifyButton.removeClass('loading');
+    verifyButton.prop('disabled', false);
+  });
+  
+  // Resend code
+  resendButton.on('click', function() {
+    const phoneId = $('#verify-phone-id').val();
+    
+    // Reset des champs
+    codeInputs.each(function() {
+      $(this).val('');
+      $(this).removeClass('filled error success');
+    });
+    
+    updateHiddenInput();
+    updateVerifyButton();
+    
+    // Désactiver le bouton et ajouter un indicateur de chargement
+    resendButton.prop('disabled', true);
+    resendButton.html('<i class="fa fa-spinner fa-spin"></i> Envoi en cours...');
+    
+    // Afficher un message d'attente
+    $('#verification-status-messages').html(`
+      <div class="alert alert-info">
+        <i class="fa fa-info-circle me-2"></i>
+        Envoi d'un nouveau code en cours...
+      </div>
+    `);
+    
+    // AJAX call to resend code
+    $.ajax({
+      url: "{{ route('influencer.whatsapp.resend') }}",
+      type: "POST",
+      data: {
+        _token: "{{ csrf_token() }}",
+        phone_id: phoneId
+      },
+      success: function(response) {
+        if (response.success) {
+          // Afficher un message de succès
+          $('#verification-status-messages').html(`
+            <div class="alert alert-success">
+              <i class="fa fa-check-circle me-2"></i>
+              Code renvoyé avec succès. Veuillez vérifier votre WhatsApp.
+            </div>
+          `);
+          
+          // Reset timer
+          timeLeft = 60;
+          resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
+          startTimer();
+          
+          // Focuser le premier champ
+          codeInputs.eq(0).focus();
+        } else {
           // Afficher un message d'erreur
           $('#verification-status-messages').html(`
             <div class="alert alert-danger">
               <i class="fa fa-exclamation-circle me-2"></i>
-              Erreur de connexion. Veuillez réessayer.
+              ${response.message || 'Une erreur est survenue lors du renvoi du code'}
             </div>
           `);
-          $('#resendCode').prop('disabled', false);
-          $('#resendCode').html('Renvoyer le code');
+          resendButton.prop('disabled', false);
+          resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
         }
-      });
-    });
-    
-    // Validation et soumission du formulaire
-    $('#verifyForm').on('submit', function() {
-      const code = $('#verification-code').val();
-      
-      if (code.length < 6) {
+      },
+      error: function(xhr) {
+        // Afficher un message d'erreur
         $('#verification-status-messages').html(`
           <div class="alert alert-danger">
             <i class="fa fa-exclamation-circle me-2"></i>
-            Veuillez saisir un code de vérification à 6 chiffres.
+            Erreur de connexion. Veuillez réessayer.
           </div>
         `);
-        return false;
+        resendButton.prop('disabled', false);
+        resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
       }
-      
-      // Afficher un indicateur de chargement
-      $('#verifySubmit').prop('disabled', true);
-      $('#verifySubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Vérification...');
-      
-      return true;
     });
   });
+  
+  // Validation et soumission du formulaire
+  $('#verifyForm').on('submit', function() {
+    const code = $('#verification-code').val();
+    
+    if (code.length < 6) {
+      $('#verification-status-messages').html(`
+        <div class="alert alert-danger">
+          <i class="fa fa-exclamation-circle me-2"></i>
+          Veuillez saisir un code de vérification à 6 chiffres.
+        </div>
+      `);
+      showAllInputsError();
+      return false;
+    }
+    
+    // Afficher un indicateur de chargement
+    verifyButton.addClass('loading');
+    verifyButton.prop('disabled', true);
+    
+    return true;
+  });
+}
 </script>
 @endpush
 @endsection
