@@ -492,28 +492,29 @@
 
 @push('scripts')
 <script>
+// Variables globales pour le timer
+let verificationTimer = null;
+let verificationTimeLeft = 60;
+
 $(document).ready(function() {
-  // Initialiser la gestion des codes de vérification
-  initVerificationCode();
-  
   // Ajout d'un spinner lors de la soumission du formulaire d'ajout
   $('#addPhoneForm').on('submit', function() {
     $('#addPhoneSubmit').prop('disabled', true);
     $('#addPhoneSubmit').html('<i class="fa fa-spinner fa-spin me-1"></i> Traitement...');
   });
-  
+
   // Vérifier automatiquement l'état d'envoi du code après ajout de numéro
   @if(session('phone_id'))
     var phoneId = "{{ session('phone_id') }}";
-    
+
     // Afficher immédiatement le modal de vérification
-    $(document).ready(function() {
+    setTimeout(function() {
       // Ouvrir le modal
       $('#verifyModal').modal('show');
-      
+
       // Définir l'ID du téléphone
       $('#verify-phone-id').val(phoneId);
-      
+
       // Afficher un message d'attente
       $('#verification-status-messages').html(`
         <div class="alert alert-info">
@@ -521,7 +522,7 @@ $(document).ready(function() {
           Veuillez patienter pendant l'envoi du code via WhatsApp...
         </div>
       `);
-      
+
       // Afficher un message d'aide après 30 secondes
       setTimeout(() => {
         if ($('#verification-code').val().length === 0) {
@@ -536,275 +537,275 @@ $(document).ready(function() {
               </ul>
             </div>
           `);
-          
+
           // Activer le bouton de renvoi
           $('#resendCode').prop('disabled', false);
-          $('#timer').text('');
+          $('#timer').text('00:00');
         }
       }, 30000);
-    });
+    }, 500);
   @endif
-  
+
   // Verify number modal
   $('.verify-number').click(function() {
     const phoneId = $(this).data('id');
     $('#verify-phone-id').val(phoneId);
-    
+
     // Réinitialiser les messages de statut
     $('#verification-status-messages').empty();
   });
+
+  // Initialiser la gestion des codes de vérification
+  initVerificationCode();
 });
 
 function initVerificationCode() {
-  const codeInputs = $('.code-input');
-  const hiddenCodeInput = $('#verification-code');
-  const verifyButton = $('#verifySubmit');
-  const resendButton = $('#resendCode');
-  let timer = null;
-  let timeLeft = 60; // 60 secondes
-  
-  // Initialiser les événements pour chaque champ
-  codeInputs.each(function(index) {
-    const input = $(this);
-    
-    // Événement de saisie
-    input.on('input', function(e) {
-      handleInput(e, index);
-    });
-    
-    // Événement de touches spéciales
-    input.on('keydown', function(e) {
-      handleKeydown(e, index);
-    });
-    
-    // Événement de collage
-    input.on('paste', function(e) {
-      handlePaste(e, index);
-    });
-    
-    // Focus et blur pour les animations
-    input.on('focus', function() {
-      this.select();
-    });
-    
-    input.on('blur', function() {
-      if (this.value) {
-        $(this).addClass('filled');
-      } else {
-        $(this).removeClass('filled');
+  // ✅ Fonction pour mettre à jour le code caché et le bouton
+  function updateCodeAndButton() {
+    let code = '';
+    $('.code-input').each(function() {
+      const val = $(this).val();
+      if (val) {
+        code += val;
       }
     });
-  });
-  
-  // Gérer la saisie
-  function handleInput(e, index) {
-    const input = $(e.target);
-    const value = input.val();
-    
-    // Permettre seulement les chiffres
-    if (!/^\d*$/.test(value)) {
-      input.val('');
-      showInputError(input);
+
+    $('#verification-code').val(code);
+
+    console.log('Code actuel:', code, 'Longueur:', code.length);
+
+    // ✅ Activer/désactiver le bouton selon la longueur du code
+    if (code.length === 6) {
+      $('#verifySubmit').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
+      console.log('✅ Bouton activé - Code complet!');
+    } else {
+      $('#verifySubmit').prop('disabled', true).removeClass('btn-primary').addClass('btn-secondary');
+      console.log('⏸️ Bouton désactivé - Code incomplet');
+    }
+  }
+
+  // Gestion des champs de code - AUTO FOCUS SUIVANT
+  $(document).off('input', '.code-input').on('input', '.code-input', function(e) {
+    const $this = $(this);
+    let value = $this.val();
+    const index = parseInt($this.data('index'));
+
+    // Nettoyer la valeur - garder seulement les chiffres ET lettres (alphanumériques)
+    value = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+    // Si plus d'un caractère a été collé, ne garder que le premier
+    if (value.length > 1) {
+      value = value.charAt(0);
+    }
+
+    // Mettre à jour la valeur nettoyée
+    $this.val(value);
+
+    // Permettre seulement les caractères alphanumériques
+    if (value.length === 0) {
+      $this.removeClass('filled error');
+      updateCodeAndButton();
       return;
     }
-    
-    // Si un chiffre est saisi
+
+    if (!/^[A-Z0-9]$/.test(value)) {
+      $this.val('');
+      $this.addClass('error');
+      setTimeout(() => $this.removeClass('error'), 500);
+      updateCodeAndButton();
+      return;
+    }
+
+    // Si un caractère alphanumérique est saisi
     if (value.length === 1) {
-      input.addClass('filled');
-      input.removeClass('error');
-      
-      // Passer au champ suivant
-      if (index < codeInputs.length - 1) {
-        codeInputs.eq(index + 1).focus();
+      $this.addClass('filled').removeClass('error');
+
+      // ✅ DÉPLACEMENT AUTOMATIQUE vers le champ suivant
+      if (index < 5) {
+        const $nextInput = $(`.code-input[data-index="${index + 1}"]`);
+        setTimeout(() => {
+          $nextInput.focus();
+        }, 10);
+      } else {
+        // Dernier champ - enlever le focus
+        $this.blur();
       }
     }
-    
-    updateHiddenInput();
-    updateVerifyButton();
-  }
+
+    updateCodeAndButton();
+  });
   
-  // Gérer les touches spéciales
-  function handleKeydown(e, index) {
-    const input = $(e.target);
+  // Gestion des touches spéciales
+  $(document).off('keydown', '.code-input').on('keydown', '.code-input', function(e) {
+    const $this = $(this);
+    const index = parseInt($this.data('index'));
     
-    switch(e.key) {
-      case 'Backspace':
-        if (input.val() === '' && index > 0) {
-          // Revenir au champ précédent
-          codeInputs.eq(index - 1).focus();
-          codeInputs.eq(index - 1).val('');
-          codeInputs.eq(index - 1).removeClass('filled');
-        } else {
-          input.removeClass('filled error');
-        }
-        updateHiddenInput();
-        updateVerifyButton();
-        break;
-        
-      case 'ArrowLeft':
-        if (index > 0) {
-          codeInputs.eq(index - 1).focus();
-        }
-        e.preventDefault();
-        break;
-        
-      case 'ArrowRight':
-        if (index < codeInputs.length - 1) {
-          codeInputs.eq(index + 1).focus();
-        }
-        e.preventDefault();
-        break;
-        
-      case 'Delete':
-        input.val('');
-        input.removeClass('filled error');
-        updateHiddenInput();
-        updateVerifyButton();
-        break;
+    if (e.key === 'Backspace') {
+      if ($this.val() === '' && index > 0) {
+        // Revenir au champ précédent
+        const $prev = $(`.code-input[data-index="${index - 1}"]`);
+        $prev.focus().val('').removeClass('filled');
+      } else {
+        $this.removeClass('filled error');
+      }
+      setTimeout(updateCodeAndButton, 10);
+      
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      $(`.code-input[data-index="${index - 1}"]`).focus();
+      e.preventDefault();
+      
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      $(`.code-input[data-index="${index + 1}"]`).focus();
+      e.preventDefault();
+      
+    } else if (e.key === 'Delete') {
+      $this.val('').removeClass('filled error');
+      setTimeout(updateCodeAndButton, 10);
     }
-  }
+  });
   
-  // Gérer le collage de code complet
-  function handlePaste(e, index) {
+  // Gestion du collage
+  $(document).off('paste', '.code-input').on('paste', '.code-input', function(e) {
     e.preventDefault();
     const pastedText = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
     const digits = pastedText.replace(/\D/g, '').slice(0, 6);
     
     if (digits.length === 6) {
       // Remplir tous les champs
-      digits.split('').forEach((digit, i) => {
-        if (i < codeInputs.length) {
-          codeInputs.eq(i).val(digit);
-          codeInputs.eq(i).addClass('filled');
-          codeInputs.eq(i).removeClass('error');
+      for (let i = 0; i < 6; i++) {
+        const $input = $(`.code-input[data-index="${i}"]`);
+        if (i < digits.length) {
+          $input.val(digits[i]).addClass('filled').removeClass('error');
+        } else {
+          $input.val('').removeClass('filled error');
         }
-      });
-      
-      // Focuser le dernier champ
-      codeInputs.eq(codeInputs.length - 1).focus();
-      
-      updateHiddenInput();
-      updateVerifyButton();
-    }
-  }
-  
-  // Mettre à jour le champ caché
-  function updateHiddenInput() {
-    let code = '';
-    codeInputs.each(function() {
-      code += $(this).val();
-    });
-    hiddenCodeInput.val(code);
-  }
-  
-  // Mettre à jour le bouton de vérification
-  function updateVerifyButton() {
-    let code = '';
-    codeInputs.each(function() {
-      code += $(this).val();
-    });
-    verifyButton.prop('disabled', code.length !== 6);
-  }
-  
-  // Afficher une erreur de saisie
-  function showInputError(input) {
-    input.addClass('error');
-    setTimeout(() => {
-      input.removeClass('error');
-    }, 500);
-  }
-  
-  // Démarrer le timer
-  function startTimer() {
-    const timerDisplay = $('#timer');
-    resendButton.prop('disabled', true);
-    
-    timer = setInterval(function() {
-      timeLeft--;
-      
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      
-      timerDisplay.text(formattedTime);
-      
-      // Changer la couleur selon le temps restant
-      if (timeLeft <= 10) {
-        timerDisplay.addClass('danger');
-        timerDisplay.removeClass('warning');
-      } else if (timeLeft <= 30) {
-        timerDisplay.addClass('warning');
-        timerDisplay.removeClass('danger');
-      } else {
-        timerDisplay.removeClass('warning danger');
       }
       
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        resendButton.prop('disabled', false);
-        timerDisplay.text("00:00");
+      // Focuser le dernier champ
+      $(`.code-input[data-index="5"]`).focus();
+      updateCodeAndButton();
+    }
+  });
+  
+  // Focus et blur
+  $(document).off('focus blur', '.code-input').on('focus', '.code-input', function() {
+    $(this).select();
+  }).on('blur', '.code-input', function() {
+    if ($(this).val()) {
+      $(this).addClass('filled');
+    } else {
+      $(this).removeClass('filled');
+    }
+  });
+  
+  // ✅ TIMER CORRIGÉ - Démarrer le timer
+  function startTimer() {
+    console.log('⏱️ Démarrage du timer');
+    const $timer = $('#timer');
+    const $resendBtn = $('#resendCode');
+
+    // Vérifier que les éléments existent
+    if ($timer.length === 0) {
+      console.error('❌ Element #timer non trouvé!');
+      return;
+    }
+    if ($resendBtn.length === 0) {
+      console.error('❌ Element #resendCode non trouvé!');
+      return;
+    }
+
+    // Arrêter le timer existant s'il y en a un
+    if (verificationTimer) {
+      console.log('⏹️ Arrêt du timer précédent');
+      clearInterval(verificationTimer);
+      verificationTimer = null;
+    }
+
+    // Réinitialiser
+    $resendBtn.prop('disabled', true);
+    verificationTimeLeft = 60;
+
+    // Afficher le temps initial
+    $timer.text('01:00').removeClass('warning danger');
+    console.log('✅ Timer initialisé à 01:00');
+
+    // Démarrer le nouveau timer
+    verificationTimer = setInterval(function() {
+      verificationTimeLeft--;
+      console.log('⏲️ Timer:', verificationTimeLeft, 'secondes restantes');
+
+      const minutes = Math.floor(verificationTimeLeft / 60);
+      const seconds = verificationTimeLeft % 60;
+      const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      $timer.text(formattedTime);
+
+      // Changer la couleur selon le temps restant
+      $timer.removeClass('warning danger');
+      if (verificationTimeLeft <= 10) {
+        $timer.addClass('danger');
+      } else if (verificationTimeLeft <= 30) {
+        $timer.addClass('warning');
+      }
+
+      if (verificationTimeLeft <= 0) {
+        console.log('⏰ Timer terminé!');
+        clearInterval(verificationTimer);
+        verificationTimer = null;
+        $resendBtn.prop('disabled', false);
+        $timer.text('00:00');
       }
     }, 1000);
   }
   
-  // Afficher erreur sur tous les champs
-  function showAllInputsError() {
-    codeInputs.each(function() {
-      $(this).addClass('error');
+  // ✅ Reset des champs
+  function resetFields() {
+    console.log('🔄 Reset des champs');
+    $('.code-input').each(function() {
+      $(this).val('').removeClass('filled error success');
     });
-    
-    setTimeout(() => {
-      codeInputs.each(function() {
-        $(this).removeClass('error');
-      });
-    }, 500);
+    $('#verification-code').val('');
+    $('#verifySubmit').prop('disabled', true);
+    updateCodeAndButton();
   }
-  
-  // Gestion des événements du modal
+
+  // ✅ Gestion des événements du modal
   $('#verifyModal').on('shown.bs.modal', function() {
-    // Reset au début
-    codeInputs.each(function() {
-      $(this).val('');
-      $(this).removeClass('filled error success');
-    });
-    
-    updateHiddenInput();
-    updateVerifyButton();
-    
-    // Démarrer le timer
-    timeLeft = 60;
+    console.log('📱 Modal ouvert - Initialisation');
+    resetFields();
     startTimer();
-    
-    // Focuser le premier champ avec un léger délai
+
+    // Focuser le premier champ avec un délai
     setTimeout(() => {
-      codeInputs.eq(0).focus();
+      console.log('🎯 Focus sur le premier champ');
+      $('.code-input[data-index="0"]').focus();
     }, 300);
   });
   
-  $('#verifyModal').on('hidden.bs.modal', function() {
-    if (timer) {
-      clearInterval(timer);
+  $('#verifyModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+    // ✅ Arrêter le timer global
+    if (verificationTimer) {
+      clearInterval(verificationTimer);
+      verificationTimer = null;
     }
-    verifyButton.removeClass('loading');
-    verifyButton.prop('disabled', false);
+    $('#verifySubmit').removeClass('loading').prop('disabled', true);
+    resetFields();
   });
   
-  // Resend code
-  resendButton.on('click', function() {
+  // Bouton renvoyer le code
+  $('#resendCode').off('click').on('click', function() {
+    const $this = $(this);
     const phoneId = $('#verify-phone-id').val();
     
-    // Reset des champs
-    codeInputs.each(function() {
-      $(this).val('');
-      $(this).removeClass('filled error success');
-    });
+    if (!phoneId) {
+      alert('Erreur: ID du téléphone manquant');
+      return;
+    }
     
-    updateHiddenInput();
-    updateVerifyButton();
+    resetFields();
     
     // Désactiver le bouton et ajouter un indicateur de chargement
-    resendButton.prop('disabled', true);
-    resendButton.html('<i class="fa fa-spinner fa-spin"></i> Envoi en cours...');
+    $this.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Envoi en cours...');
     
     // Afficher un message d'attente
     $('#verification-status-messages').html(`
@@ -824,7 +825,6 @@ function initVerificationCode() {
       },
       success: function(response) {
         if (response.success) {
-          // Afficher un message de succès
           $('#verification-status-messages').html(`
             <div class="alert alert-success">
               <i class="fa fa-check-circle me-2"></i>
@@ -832,61 +832,79 @@ function initVerificationCode() {
             </div>
           `);
           
-          // Reset timer
-          timeLeft = 60;
-          resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
+          // Redémarrer le timer
           startTimer();
+          $this.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
           
           // Focuser le premier champ
-          codeInputs.eq(0).focus();
+          $('.code-input[data-index="0"]').focus();
         } else {
-          // Afficher un message d'erreur
           $('#verification-status-messages').html(`
             <div class="alert alert-danger">
               <i class="fa fa-exclamation-circle me-2"></i>
               ${response.message || 'Une erreur est survenue lors du renvoi du code'}
             </div>
           `);
-          resendButton.prop('disabled', false);
-          resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
+          $this.prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
         }
       },
       error: function(xhr) {
-        // Afficher un message d'erreur
         $('#verification-status-messages').html(`
           <div class="alert alert-danger">
             <i class="fa fa-exclamation-circle me-2"></i>
             Erreur de connexion. Veuillez réessayer.
           </div>
         `);
-        resendButton.prop('disabled', false);
-        resendButton.html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
+        $this.prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i> Renvoyer le code');
       }
     });
   });
   
-  // Validation et soumission du formulaire
-  $('#verifyForm').on('submit', function() {
+  // Soumission du formulaire
+  $('#verifyForm').off('submit').on('submit', function(e) {
     const code = $('#verification-code').val();
     
-    if (code.length < 6) {
+    if (code.length !== 6) {
+      e.preventDefault();
+      
       $('#verification-status-messages').html(`
         <div class="alert alert-danger">
           <i class="fa fa-exclamation-circle me-2"></i>
           Veuillez saisir un code de vérification à 6 chiffres.
         </div>
       `);
-      showAllInputsError();
+      
+      // Animation d'erreur sur tous les champs
+      $('.code-input').addClass('error');
+      setTimeout(() => {
+        $('.code-input').removeClass('error');
+      }, 500);
+      
       return false;
     }
     
     // Afficher un indicateur de chargement
-    verifyButton.addClass('loading');
-    verifyButton.prop('disabled', true);
+    $('#verifySubmit').addClass('loading').prop('disabled', true);
     
     return true;
   });
 }
+
+// ✅ Test pour vérifier que tout est chargé
+console.log('✅ Verification Code JavaScript loaded successfully');
+console.log('📋 Variables globales:', {
+  verificationTimer: verificationTimer,
+  verificationTimeLeft: verificationTimeLeft
+});
+
+// Test immédiat des éléments
+$(document).ready(function() {
+  console.log('🔍 Vérification des éléments du DOM:');
+  console.log('  - #timer existe?', $('#timer').length > 0);
+  console.log('  - #resendCode existe?', $('#resendCode').length > 0);
+  console.log('  - #verifySubmit existe?', $('#verifySubmit').length > 0);
+  console.log('  - .code-input nombre:', $('.code-input').length);
+});
 </script>
 @endpush
 @endsection
