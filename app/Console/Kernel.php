@@ -44,6 +44,10 @@ class Kernel extends ConsoleKernel
              ->weeklyOn(1, '09:00'); // Every Monday at 9 AM
     }
 
+        // Run every 30 minutes to catch assignments at the ~23.5 hour mark
+    $schedule->command('whatspay:send-screenshot-reminders')
+        ->everyThirtyMinutes();
+
     /**
      * Enregistrer les commandes pour l'application.
      *

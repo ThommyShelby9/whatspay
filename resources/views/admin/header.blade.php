@@ -5,6 +5,7 @@
   <meta name="description" content="WhatsPay | La première plateforme qui connecte les annonceurs avec les diffuseurs pour la distribution de publicités via les Status WhatsApp.">
   <meta name="keywords" content="WhatsPay">
   <meta name="author" content="La Pieuvre Technologique">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="icon" href="/design/logo/favicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="/design/logo/favicon.ico" type="image/x-icon">
   <title>{{$title}} > {{$pagetilte}}</title>

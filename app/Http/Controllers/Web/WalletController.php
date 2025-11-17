@@ -1,5 +1,5 @@
 <?php
-// File: app/Http/Controllers/Web/WalletController.php (Version sans plans)
+// File: app/Http/Controllers/Web/WalletController.php (Version complète corrigée)
 
 namespace App\Http\Controllers\Web;
 
@@ -97,7 +97,7 @@ class WalletController extends Controller
         
         $this->setViewData($request, $viewData);
         
-        return view('announcer.wallet.index', [
+        return view('annonceur.wallet.index', [
             'alert' => $alert,
             'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
@@ -112,6 +112,11 @@ class WalletController extends Controller
         try {
             $userId = $request->session()->get('userid');
             
+            Log::info('=== DÉBUT DEPOT ===', [
+                'user_id' => $userId,
+                'request_data' => $request->all()
+            ]);
+            
             // Validation des données
             $request->validate([
                 'payment_method' => 'required|string',
@@ -124,11 +129,23 @@ class WalletController extends Controller
                 'phone.regex' => 'Format de numéro de téléphone invalide',
             ]);
             
+            Log::info('Validation OK');
+            
             // Nettoyer le numéro de téléphone
             $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
             if (!str_starts_with($phone, '225')) {
                 $phone = '225' . $phone;
             }
+            
+            Log::info('Téléphone nettoyé', ['phone' => $phone]);
+            
+            // Vérifier si PaymentService existe
+            if (!$this->paymentService) {
+                Log::error('PaymentService non initialisé');
+                throw new \Exception('Service de paiement non disponible');
+            }
+            
+            Log::info('PaymentService OK, appel initiateDeposit...');
             
             // Initier le dépôt via PayPlus
             $result = $this->paymentService->initiateDeposit(
@@ -137,6 +154,8 @@ class WalletController extends Controller
                 $phone,
                 true
             );
+            
+            Log::info('Résultat PaymentService', $result);
             
             if ($result['success']) {
                 session([
@@ -147,14 +166,20 @@ class WalletController extends Controller
                     ]
                 ]);
                 
+                Log::info('Redirection vers PayPlus', ['url' => $result['redirect_url']]);
+                
                 return redirect()->away($result['redirect_url']);
             } else {
+                Log::warning('Échec PaymentService', $result);
+                
                 return redirect()->route('announcer.wallet')
                     ->with('type', 'danger')
                     ->with('message', $result['message']);
             }
             
         } catch (ValidationException $e) {
+            Log::error('Erreur validation', $e->errors());
+            
             return redirect()->route('announcer.wallet')
                 ->withErrors($e->errors())
                 ->withInput()
@@ -162,9 +187,21 @@ class WalletController extends Controller
                 ->with('message', 'Veuillez corriger les erreurs dans le formulaire');
                 
         } catch (\Exception $e) {
+            Log::error('ERREUR GENERALE DEPOT', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // En mode développement, afficher l'erreur réelle
+            $errorMessage = config('app.debug') ? 
+                'ERREUR DEBUG: ' . $e->getMessage() . ' (Ligne ' . $e->getLine() . ')' :
+                'Une erreur est survenue. Veuillez réessayer.';
+            
             return redirect()->route('announcer.wallet')
                 ->with('type', 'danger')
-                ->with('message', 'Une erreur est survenue. Veuillez réessayer.');
+                ->with('message', $errorMessage);
         }
     }
     
@@ -173,14 +210,30 @@ class WalletController extends Controller
      */
     public function handlePaymentReturn(Request $request)
     {
+        Log::info('=== RETOUR PAIEMENT PAYPLUS ===', [
+            'query_params' => $request->query(),
+            'all_params' => $request->all()
+        ]);
+        
         $status = $request->get('status');
         $pendingDeposit = session('pending_deposit');
+        
+        Log::info('Status retour et session', [
+            'status' => $status,
+            'pending_deposit' => $pendingDeposit
+        ]);
         
         if ($pendingDeposit) {
             session()->forget('pending_deposit');
             
             if ($status === 'success') {
+                // Vérifier le statut de la transaction avec PayPlus
                 $transactionStatus = $this->paymentService->checkTransactionStatus($pendingDeposit['transaction_id']);
+                
+                Log::info('Vérification statut transaction', [
+                    'transaction_id' => $pendingDeposit['transaction_id'],
+                    'status_check_result' => $transactionStatus
+                ]);
                 
                 if ($transactionStatus['success'] && $transactionStatus['status'] === 'completed') {
                     return redirect()->route('announcer.wallet')
@@ -212,13 +265,26 @@ class WalletController extends Controller
         $alert = [];
         $this->setAlert($request, $alert);
         
-        $viewData['transactions'] = $this->walletService->getPaginatedTransactions($userId, 25);
-        $viewData['transactionStats'] = $this->walletService->getTransactionStats($userId);
-        $viewData['balance'] = $this->walletService->getBalance($userId);
+        try {
+            $viewData['transactions'] = $this->walletService->getPaginatedTransactions($userId, 25);
+            $viewData['transactionStats'] = $this->walletService->getTransactionStats($userId);
+            $viewData['balance'] = $this->walletService->getBalance($userId);
+        } catch (\Exception $e) {
+            Log::error('Error in transaction history: ' . $e->getMessage());
+            
+            $viewData['transactions'] = collect([]);
+            $viewData['transactionStats'] = $this->getDefaultTransactionStats();
+            $viewData['balance'] = 0;
+            
+            $alert = [
+                'type' => 'warning',
+                'message' => 'Impossible de charger l\'historique. Veuillez réessayer.'
+            ];
+        }
         
         $this->setViewData($request, $viewData);
         
-        return view('announcer.wallet.history', [
+        return view('annonceur.wallet.history', [
             'alert' => $alert,
             'viewData' => $viewData,
             'title' => 'WhatsPAY | Historique des transactions',
@@ -236,19 +302,158 @@ class WalletController extends Controller
         
         try {
             $summary = $this->walletService->getWalletSummary($userId);
-            $spendingOverview = $this->campaignBudgetService->getClientSpendingOverview($userId);
+            
+            try {
+                $spendingOverview = $this->campaignBudgetService->getClientSpendingOverview($userId);
+                $spending = $spendingOverview['success'] ? $spendingOverview['overview'] : null;
+            } catch (\Exception $e) {
+                $spending = null;
+                Log::warning('Could not fetch spending overview for API: ' . $e->getMessage());
+            }
             
             return response()->json([
                 'success' => true,
                 'wallet' => $summary,
-                'spending' => $spendingOverview['success'] ? $spendingOverview['overview'] : null
+                'spending' => $spending
             ]);
             
         } catch (\Exception $e) {
+            Log::error('Error in wallet stats API: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la récupération des statistiques'
             ], 500);
+        }
+    }
+    
+    /**
+     * Initier un retrait (pour les influenceurs)
+     */
+    public function initiateWithdrawal(Request $request)
+    {
+        try {
+            $userId = $request->session()->get('userid');
+            
+            // Validation
+            $request->validate([
+                'amount' => 'required|numeric|min:500|max:500000',
+                'withdrawal_method' => 'required|in:mobile_money,bank',
+                'phone' => 'required_if:withdrawal_method,mobile_money|string|regex:/^[0-9]{8,15}$/',
+                'bank_account' => 'required_if:withdrawal_method,bank|string',
+                'bank_name' => 'required_if:withdrawal_method,bank|string',
+            ], [
+                'amount.min' => 'Le montant minimum de retrait est de 500 FCFA',
+                'amount.max' => 'Le montant maximum de retrait est de 500 000 FCFA',
+                'phone.required_if' => 'Le numéro de téléphone est requis pour Mobile Money',
+                'phone.regex' => 'Format de numéro de téléphone invalide',
+                'bank_account.required_if' => 'Le numéro de compte est requis',
+                'bank_name.required_if' => 'Le nom de la banque est requis',
+            ]);
+            
+            $amount = $request->input('amount');
+            $balance = $this->walletService->getBalance($userId);
+            
+            // Vérifier le solde disponible
+            if ($balance < $amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solde insuffisant. Solde disponible : ' . number_format($balance, 0, ',', ' ') . ' FCFA'
+                ]);
+            }
+            
+            // Traitement selon la méthode de retrait
+            if ($request->input('withdrawal_method') === 'mobile_money') {
+                // Nettoyer le numéro de téléphone
+                $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
+                if (!str_starts_with($phone, '225')) {
+                    $phone = '225' . $phone;
+                }
+                
+                // Initier le retrait via PayPlus
+                $result = $this->paymentService->initiateWithdrawal(
+                    $userId,
+                    $amount,
+                    $phone,
+                    false // Direct mobile money
+                );
+                
+            } else {
+                // Pour les retraits bancaires, créer une demande manuelle
+                $result = $this->createBankWithdrawalRequest($userId, $amount, $request->all());
+            }
+            
+            return response()->json($result);
+            
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Withdrawal error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug') ? 
+                    'Erreur: ' . $e->getMessage() :
+                    'Une erreur est survenue. Veuillez réessayer.'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Créer une demande de retrait bancaire
+     */
+    private function createBankWithdrawalRequest($userId, $amount, $bankData)
+    {
+        try {
+            $transactionId = $this->getId();
+            
+            // Créer une transaction en attente pour retrait bancaire
+            \App\Models\PaymentTransaction::create([
+                'id' => $transactionId,
+                'user_id' => $userId,
+                'amount' => -$amount,
+                'currency' => 'XOF',
+                'status' => 'PENDING',
+                'reference' => 'BANK-' . time() . '-' . substr($transactionId, 0, 8),
+                'payload' => json_encode([
+                    'type' => 'bank_withdrawal',
+                    'bank_name' => $bankData['bank_name'],
+                    'account_number' => $bankData['bank_account'],
+                    'account_holder' => $bankData['account_holder'] ?? '',
+                    'amount' => $amount
+                ])
+            ]);
+            
+            // Déduire temporairement les fonds (seront remboursés si le retrait échoue)
+            $deductResult = $this->walletService->deductFunds(
+                $userId,
+                $amount,
+                'Demande de retrait bancaire - ' . $bankData['bank_name'],
+                $transactionId
+            );
+            
+            if ($deductResult['success']) {
+                return [
+                    'success' => true,
+                    'message' => 'Votre demande de retrait bancaire a été soumise. Elle sera traitée dans 2-3 jours ouvrables.',
+                    'transaction_id' => $transactionId
+                ];
+            } else {
+                return $deductResult;
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Bank withdrawal request error: ' . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => 'Erreur lors de la création de la demande de retrait'
+            ];
         }
     }
     
@@ -294,7 +499,7 @@ class WalletController extends Controller
             $spendingOverview = $this->campaignBudgetService->getClientSpendingOverview($userId);
             
             if ($spendingOverview['success']) {
-                $pendingPayments = $spendingOverview['overview']['pending_payments'];
+                $pendingPayments = $spendingOverview['overview']['pending_payments'] ?? 0;
                 
                 if ($balance < $pendingPayments) {
                     return [

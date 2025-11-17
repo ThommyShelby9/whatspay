@@ -66,4 +66,7 @@
 <script src="/custom/admin.js?version={{ $version }}"></script>
 <!-- Plugin used-->
 
+{{-- Custom scripts from child views (loaded after all dependencies) --}}
+@stack('scripts')
+
 @include('admin.toast')

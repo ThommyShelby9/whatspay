@@ -9,7 +9,13 @@ use App\Http\Controllers\Web\TaskController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WhatsAppController;
 use App\Http\Controllers\Web\Admin\DashboardAdminController;
+use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
+
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+
 
 // Redirection vers la page de login
 Route::get('/login', function () {
@@ -152,6 +158,15 @@ Route::prefix('admin')->middleware(['auth'])->group(function () {
 
 //Enrégistrer un clic
 Route::get('/track/{id}', [TrackingApiController::class, 'trackClick'])->name('api.track_click');
+// File: routes/web.php (add these routes)
+
+// Admin WhatsApp messaging routes
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::get('/whatsapp-messaging', [WhatsAppMessagingController::class, 'index'])
+        ->name('admin.whatsapp_messaging');
+    Route::post('/whatsapp-messaging/send', [WhatsAppMessagingController::class, 'sendMassMessage'])
+        ->name('admin.whatsapp_messaging.send');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -160,7 +175,154 @@ Route::get('/track/{id}', [TrackingApiController::class, 'trackClick'])->name('a
 */
 Route::get('/sendmessage/{recipient}', [WhatsAppController::class, 'sendMessage'])->name('send_message');
 Route::get('/sendmessage2/{recipient}/{message?}', [WhatsAppController::class, 'sendMessage2'])->name('send_message2');
+// Route de debug temporaire
+// routes/web.php - debug temporaire
+Route::get('/debug-session', function () {
+    try {
+        // Test de connexion à la base de données
+        $dbConnected = DB::connection()->getPdo() ? true : false;
 
+        // Vérifier si la table sessions existe
+        $sessionsTableExists = Schema::hasTable('sessions');
+
+        // Compter les sessions
+        $sessionsCount = $sessionsTableExists ? DB::table('sessions')->count() : 'N/A';
+
+        return response()->json([
+            'status' => 'OK',
+            'database' => [
+                'connected' => $dbConnected,
+                'sessions_table_exists' => $sessionsTableExists,
+                'sessions_count' => $sessionsCount,
+            ],
+            'session' => [
+                'driver' => config('session.driver'),
+                'csrf_token' => csrf_token(),
+                'session_id' => session()->getId(),
+                'session_token' => session()->token(),
+                'domain' => config('session.domain'),
+                'secure' => config('session.secure'),
+                'lifetime' => config('session.lifetime'),
+                'same_site' => config('session.same_site'),
+            ],
+            'request' => [
+                'scheme' => request()->getScheme(),
+                'is_secure' => request()->isSecure(),
+                'url' => request()->url(),
+                'full_url' => request()->fullUrl(),
+            ],
+            'headers' => [
+                'x-forwarded-proto' => request()->header('X-Forwarded-Proto'),
+                'x-forwarded-host' => request()->header('X-Forwarded-Host'),
+                'x-forwarded-port' => request()->header('X-Forwarded-Port'),
+                'x-forwarded-for' => request()->header('X-Forwarded-For'),
+                'host' => request()->header('Host'),
+            ],
+            'cookies' => [
+                'session_cookie_name' => config('session.cookie'),
+                'cookies_received' => array_keys(request()->cookies->all()),
+            ],
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'ERROR',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
+Route::get('/test-login', function () {
+    return '<form method="POST" action="/admin/login">
+        ' . csrf_field() . '
+        <input type="email" name="email" value="admin@lapieuvre.tech" required>
+        <input type="password" name="password" value="zsedrftgyhuji" required>
+        <button type="submit">Login Direct (sans JS)</button>
+    </form>';
+});
+
+// Route de test PayPlus API
+Route::get('/test-payplus', function () {
+    $baseUrl = config('payplus.base_url');
+    $apiKey = config('payplus.api_key');
+    $apiToken = config('payplus.api_token');
+
+    $results = [];
+
+    // Test 1: Ping base URL
+    try {
+        $response = Http::timeout(10)->get($baseUrl);
+        $results['base_url_test'] = [
+            'url' => $baseUrl,
+            'status' => $response->status(),
+            'success' => $response->successful(),
+            'body' => substr($response->body(), 0, 500)
+        ];
+    } catch (\Exception $e) {
+        $results['base_url_test'] = [
+            'url' => $baseUrl,
+            'error' => $e->getMessage()
+        ];
+    }
+
+    // Test 2: Test endpoints communs
+    $endpoints = [
+        '/pay/v01/redirect/checkout-invoice/create',
+        '/api/v01/redirect/checkout-invoice/create',
+        '/v01/redirect/checkout-invoice/create',
+        '/checkout-invoice/create',
+    ];
+
+    foreach ($endpoints as $endpoint) {
+        $fullUrl = $baseUrl . $endpoint;
+        try {
+            $response = Http::timeout(5)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiToken,
+                    'Apikey' => $apiKey,
+                    'Content-Type' => 'application/json'
+                ])
+                ->post($fullUrl, [
+                    'test' => 'ping'
+                ]);
+
+            $results['endpoints'][$endpoint] = [
+                'status' => $response->status(),
+                'success' => $response->successful(),
+                'body' => substr($response->body(), 0, 200)
+            ];
+        } catch (\Exception $e) {
+            $results['endpoints'][$endpoint] = [
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    $results['config'] = [
+        'base_url' => $baseUrl,
+        'has_api_key' => !empty($apiKey),
+        'has_token' => !empty($apiToken),
+        'api_key_length' => strlen($apiKey),
+        'token_length' => strlen($apiToken)
+    ];
+
+    return response()->json($results, 200, [], JSON_PRETTY_PRINT);
+});
+
+// Route de debug pour voir les middlewares actifs
+Route::get('/debug-middlewares', function () {
+    $router = app('router');
+    $routes = $router->getRoutes();
+    
+    foreach ($routes as $route) {
+        if ($route->uri() === 'admin/login') {
+            return [
+                'middlewares' => $route->middleware(),
+                'action' => $route->getAction(),
+            ];
+        }
+    }
+});
 /*
 |--------------------------------------------------------------------------
 | Include Payment Routes
