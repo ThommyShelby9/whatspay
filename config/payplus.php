@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'base_url' => env('PAYPLUS_BASE_URL', 'https://api.payplus.africa'),
+    'base_url' => env('PAYPLUS_BASE_URL', 'https://app.payplus.africa'),
 
     'api_key' => env('PAYPLUS_API_KEY', '57DD7H4RBP8WVAM3D'),
 

@@ -24,7 +24,7 @@ class PaymentService
     public function __construct(WalletService $walletService)
     {
         $this->walletService = $walletService;
-        $this->payPlusBaseUrl = config('payplus.base_url', 'https://api.payplus.africa');
+        $this->payPlusBaseUrl = config('payplus.base_url', 'https://app.payplus.africa');
         $this->payPlusApiKey = config('payplus.api_key', '57DD7H4RBP8WVAM3D');
         $this->payPlusApiToken = config('payplus.api_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZF9hcHAiOiI0NjgyIiwiaWRfYWJvbm5lIjoxMDc4MCwiZGF0ZWNyZWF0aW9uX2FwcCI6IjIwMjUtMTEtMDEgMDI6MTU6MTIifQ.aOirgkjSysUBnUUAQG6m9eJpZu0WAz1OInYbYAqX_rY');
     }
