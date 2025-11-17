@@ -130,4 +130,12 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class);
     }
+
+    /**
+     * Relation avec les tâches
+     */
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'client_id');
+    }
 }

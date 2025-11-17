@@ -5,7 +5,7 @@
 
     <div class="container-fluid">
         <!-- Page Header -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-sm-12">
                 <div class="page-title-box">
                     <div class="row">
@@ -33,17 +33,17 @@
                     <h5 class="card-title mb-0">Options de filtrage</h5>
                 </div>
                 <div class="card-body">
-                    <form class="form theme-form" method="post" action="" enctype="multipart/form-data">
+                    <form class="form theme-form" method="get" action="" enctype="multipart/form-data">
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Pays de résidence</label>
                                     <select class="form-select select2" id="filtre_country" name="filtre_country">
-                                        <option value="all">Tous les pays</option>
+                                        <option value="">Tous les pays</option>
                                         @foreach ($viewData['countries'] as $item)
-                                            <option value="{{ $item->id }}"
-                                                @if ($item->id == $viewData['filtre_country']) selected @endif>{{ $item->name }}
-                                                {{ $item->emoji }}</option>
+                                            <option value="{{ $item->id }}" @selected($item->id == $viewData['filtre_country'])>
+                                                {{ $item->name }} {{ $item->emoji }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -52,14 +52,16 @@
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Localité de résidence</label>
-                                    <select class="form-select select2" id="filtre_locality" name="filtre_locality">
-                                        <option value="all">Toutes les localités</option>
-                                        @if ($viewData['filtre_country'] != '')
+                                    <select class="form-select select2" id="filtre_locality" name="filtre_locality"
+                                        data-selected="{{ $viewData['filtre_locality'] ?? '' }}">
+                                        <option value="">Toutes les localités</option>
+
+                                        @if ($viewData['filtre_country'])
                                             @foreach ($viewData['localities'] as $item)
                                                 @if ($item->country_id == $viewData['filtre_country'])
-                                                    <option value="{{ $item->id }}"
-                                                        @if ($item->id == $viewData['filtre_locality']) selected @endif>
-                                                        {{ $item->name }}</option>
+                                                    <option value="{{ $item->id }}" @selected($item->id == $viewData['filtre_locality'])>
+                                                        {{ $item->name }}
+                                                    </option>
                                                 @endif
                                             @endforeach
                                         @endif
@@ -67,7 +69,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-3">
+                            {{-- <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Profil</label>
                                     <select class="form-select" id="filtre_profile" name="filtre_profile">
@@ -80,13 +82,13 @@
                                         </option>
                                     </select>
                                 </div>
-                            </div>
+                            </div> --}}
 
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label class="form-label">Statut</label>
                                     <select class="form-select" id="filtre_status" name="filtre_status">
-                                        <option value="all">Tous les statuts</option>
+                                        <option value="">Tous les statuts</option>
                                         <option value="1" @if (isset($viewData['filtre_status']) && $viewData['filtre_status'] == '1') selected @endif>Actif
                                         </option>
                                         <option value="0" @if (isset($viewData['filtre_status']) && $viewData['filtre_status'] == '0') selected @endif>Inactif
@@ -99,13 +101,15 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary me-2">Appliquer les filtres</button>
                                     <a href="{{ route('admin.users', ['group' => 'all']) }}"
-                                        class="btn btn-outline-secondary">Réinitialiser</a>
+                                        class="btn btn-light me-2">Réinitialiser</a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-filter me-1"></i>Appliquer les filtres
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <input type="hidden" name="_token" value="{{ csrf_token() }}" />
+                        {{-- Filtre via GET pour éviter d'être interprété comme une action POST côté contrôleur --}}
                     </form>
                 </div>
             </div>
@@ -118,19 +122,6 @@
                     <div>
                         <h5 class="card-title mb-0">{{ $pagetilte }}</h5>
                         <small class="text-muted">{{ $pagecardtilte }}</small>
-                    </div>
-                    <div>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                <i class="fa fa-file-export me-1"></i>Exporter
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" id="export-excel">Excel</a></li>
-                                <li><a class="dropdown-item" href="#" id="export-pdf">PDF</a></li>
-                                <li><a class="dropdown-item" href="#" id="export-csv">CSV</a></li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -204,8 +195,7 @@
                                             <input class="form-check-input toggle-status" type="checkbox" role="switch"
                                                 data-user-id="{{ $item->id }}"
                                                 @if (isset($item->enabled) && $item->enabled) checked @endif>
-                                            <label class="form-check-label status-label"
-                                                for="status-{{ $item->id }}">
+                                            <label class="form-check-label status-label" for="status-{{ $item->id }}">
                                                 @if (isset($item->enabled) && $item->enabled)
                                                     <span class="text-success">Actif</span>
                                                 @else
@@ -221,9 +211,9 @@
                                     </td>
                                     <td>
                                         <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                                type="button" id="dropdownMenuButton-{{ $item->id }}"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                                id="dropdownMenuButton-{{ $item->id }}" data-bs-toggle="dropdown"
+                                                aria-expanded="false">
                                                 Actions
                                             </button>
                                             <ul class="dropdown-menu"
@@ -233,10 +223,18 @@
                                                             class="fa fa-eye me-2"></i>Voir</a></li>
                                                 <li><a class="dropdown-item"
                                                         href="{{ route('admin.users', ['group' => 'all', 'action' => 'edit', 'id' => $item->id]) }}"><i
-                                                            class="fa fa-edit me-2"></i>Modifier</a></li>
+                                                            class="fa fa-edit me-2"></i>Modifier
+                                                    </a>
+                                                </li>
+                                                <li><a class="dropdown-item"
+                                                        href="{{ route('admin.users', ['group' => 'all', 'action' => 'campaigns', 'id' => $item->id]) }}"><i
+                                                            class="fa fa-certificate me-2"></i>Campagnes
+                                                    </a>
+                                                </li>
                                                 @if (strpos($item->profiles ?? '', 'DIFFUSEUR') !== false)
                                                     <li><a class="dropdown-item" href="#"><i
-                                                                class="fa fa-chart-line me-2"></i>Statistiques</a></li>
+                                                                class="fa fa-chart-line me-2"></i>Statistiques
+                                                        </a></li>
                                                 @endif
                                                 @if (strpos($item->profiles ?? '', 'ANNONCEUR') !== false)
                                                     <li><a class="dropdown-item" href="#"><i
@@ -307,115 +305,143 @@
     <input type="hidden" name="studiesJson" id="studiesJson" value="{{ $viewData['studiesJson'] }}">
     <input type="hidden" name="categoriesJson" id="categoriesJson" value="{{ $viewData['categoriesJson'] }}">
 
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Initialize DataTable
-                const dataTable = $('#items_datatable').DataTable({
-                    responsive: true,
-                    dom: 'Bfrtip',
-                    buttons: [
-                        'copyHtml5',
-                        'excelHtml5',
-                        'csvHtml5',
-                        'pdfHtml5'
-                    ],
-                    lengthMenu: [
-                        [10, 25, 50, -1],
-                        [10, 25, 50, 'Tous']
-                    ],
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize DataTable
+            /* const dataTable = $('#items_datatable').DataTable({
+                responsive: true,
+                dom: 'Bfrtip',
+                buttons: [
+                    'copyHtml5',
+                    'excelHtml5',
+                    'csvHtml5',
+                    'pdfHtml5'
+                ],
+                lengthMenu: [
+                    [10, 25, 50, -1],
+                    [10, 25, 50, 'Tous']
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+                }
+            }); */
+
+            // Export buttons
+            document.getElementById('export-excel').addEventListener('click', function() {
+                dataTable.button('.buttons-excel').trigger();
+            });
+
+            document.getElementById('export-pdf').addEventListener('click', function() {
+                dataTable.button('.buttons-pdf').trigger();
+            });
+
+            document.getElementById('export-csv').addEventListener('click', function() {
+                dataTable.button('.buttons-csv').trigger();
+            });
+
+            // Country and locality filter interaction
+            const countriesList = @json($viewData['countriesList']);
+            const localitiesList = @json($viewData['localitiesList']);
+            const countrySelect = document.getElementById('filtre_country');
+            const localitySelect = document.getElementById('filtre_locality');
+
+            const DEFAULT_LOCALITY_OPTION_HTML =
+                '<option value="">Toutes les localités</option>';
+
+            // === Fonction principale ===
+            function populateLocalitiesForCountry(countryId, selectedLocality = "") {
+
+                // Reset
+                localitySelect.innerHTML = DEFAULT_LOCALITY_OPTION_HTML;
+
+                // Trouver le pays sélectionné
+                const country = countriesList.find(
+                    (c) => String(c.id) === String(countryId)
+                );
+
+                if (!country || country.name !== "Benin") {
+                    // Si ce n'est pas le Bénin → localités vides
+                    $("#filtre_locality").trigger("change.select2");
+                    return;
+                }
+
+                // Filtrer les localités du pays
+                const filtered = localitiesList.filter(
+                    (l) => String(l.country_id) === String(countryId)
+                );
+
+                // Ajouter options
+                filtered.forEach((loc) => {
+                    const option = document.createElement("option");
+                    option.value = loc.id;
+                    option.textContent = loc.name;
+
+                    if (String(loc.id) === String(selectedLocality)) {
+                        option.selected = true;
                     }
+
+                    localitySelect.appendChild(option);
                 });
 
-                // Export buttons
-                document.getElementById('export-excel').addEventListener('click', function() {
-                    dataTable.button('.buttons-excel').trigger();
+                $("#filtre_locality").trigger("change.select2");
+            }
+
+            // === Listener du select pays ===
+            if (countrySelect && localitySelect) {
+                $("#filtre_country").on("select2:select", function() {
+                    const countryId = this.value;
+
+                    const selectedLocality = localitySelect.dataset.selected || "";
+                    populateLocalitiesForCountry(countryId, selectedLocality);
                 });
 
-                document.getElementById('export-pdf').addEventListener('click', function() {
-                    dataTable.button('.buttons-pdf').trigger();
-                });
+                // Initialisation au chargement
+                const initCountry = countrySelect.value || "";
+                const selectedLocality = localitySelect.dataset.selected || "";
 
-                document.getElementById('export-csv').addEventListener('click', function() {
-                    dataTable.button('.buttons-csv').trigger();
-                });
+                if (initCountry !== "") {
+                    populateLocalitiesForCountry(initCountry, selectedLocality);
+                }
+            }
 
-                // Country and locality filter interaction
-                const countriesJson = JSON.parse(document.getElementById('countriesJson').value);
-                const localitiesJson = JSON.parse(document.getElementById('localitiesJson').value);
-                const countrySelect = document.getElementById('filtre_country');
-                const localitySelect = document.getElementById('filtre_locality');
+            // Status toggle
+            const toggleStatusElements = document.querySelectorAll('.toggle-status');
+            toggleStatusElements.forEach(element => {
+                element.addEventListener('change', function() {
+                    const userId = this.dataset.userId;
+                    const statusLabel = this.nextElementSibling;
 
-                countrySelect.addEventListener('change', function() {
-                    const selectedCountryId = this.value;
-
-                    // Clear the locality dropdown
-                    localitySelect.innerHTML = '<option value="all">Toutes les localités</option>';
-
-                    if (selectedCountryId !== 'all') {
-                        // Filter localities by country and add them to the dropdown
-                        const filteredLocalities = localitiesJson.filter(locality => locality.country_id ==
-                            selectedCountryId);
-
-                        filteredLocalities.forEach(locality => {
-                            const option = document.createElement('option');
-                            option.value = locality.id;
-                            option.textContent = locality.name;
-                            localitySelect.appendChild(option);
-                        });
+                    if (this.checked) {
+                        statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+                    } else {
+                        statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
                     }
-                });
+                    console.log(userId);
 
-                // Status toggle
-                const toggleStatusElements = document.querySelectorAll('.toggle-status');
-                toggleStatusElements.forEach(element => {
-                    element.addEventListener('change', function() {
-                        const userId = this.dataset.userId;
-                        const statusLabel = this.nextElementSibling;
 
-                        if (this.checked) {
-                            statusLabel.innerHTML = '<span class="text-success">Actif</span>';
-                        } else {
-                            statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
-                        }
-
-                        // Send AJAX request to update status
-                        fetch(window.location.pathname, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: JSON.stringify({
-                                    action: 'toggle_status',
-                                    user_id: userId,
-                                    enabled: this.checked ? 1 : 0
-                                })
+                    // Send AJAX request to update status
+                    fetch(window.location.pathname, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector(
+                                    'meta[name="csrf-token"]').content,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                action: 'toggle_status',
+                                user_id: userId,
+                                enabled: this.checked ? 1 : 0
                             })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    // Show success toast or notification
-                                    alert(data.message);
-                                } else {
-                                    // Show error toast or notification
-                                    alert(data.message);
-                                    // Revert the toggle if the request failed
-                                    this.checked = !this.checked;
-                                    if (this.checked) {
-                                        statusLabel.innerHTML =
-                                            '<span class="text-success">Actif</span>';
-                                    } else {
-                                        statusLabel.innerHTML =
-                                            '<span class="text-danger">Inactif</span>';
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                alert('Une erreur est survenue lors de la modification du statut');
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show success toast or notification
+                                alert(data.message);
+                            } else {
+                                // Show error toast or notification
+                                alert(data.message);
                                 // Revert the toggle if the request failed
                                 this.checked = !this.checked;
                                 if (this.checked) {
@@ -425,115 +451,110 @@
                                     statusLabel.innerHTML =
                                         '<span class="text-danger">Inactif</span>';
                                 }
-                            });
-                    });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Une erreur est survenue lors de la modification du statut');
+                            // Revert the toggle if the request failed
+                            this.checked = !this.checked;
+                            if (this.checked) {
+                                statusLabel.innerHTML =
+                                    '<span class="text-success">Actif</span>';
+                            } else {
+                                statusLabel.innerHTML =
+                                    '<span class="text-danger">Inactif</span>';
+                            }
+                        });
                 });
-
-                // Delete user modal
-                const deleteModal = document.getElementById('deleteModal');
-                if (deleteModal) {
-                    deleteModal.addEventListener('show.bs.modal', function(event) {
-                        const button = event.relatedTarget;
-                        const userId = button.getAttribute('data-user-id');
-                        const userName = button.getAttribute('data-user-name');
-
-                        document.getElementById('delete-user-id').value = userId;
-                        document.getElementById('delete-user-name').textContent = userName;
-                    });
-                }
-
-                // Initialize Select2 for dropdowns if available
-                if (typeof $.fn.select2 !== 'undefined') {
-                    $('.select2').select2({
-                        theme: 'bootstrap-5'
-                    });
-                }
             });
 
-            document.addEventListener('DOMContentLoaded', function() {
-                // Récupérer le jeton CSRF
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                    document.querySelector('input[name="_token"]')?.value;
+            // Delete user modal
+            const deleteModal = document.getElementById('deleteModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const userId = button.getAttribute('data-user-id');
+                    const userName = button.getAttribute('data-user-name');
 
-                // 1. Gestion des boutons du dropdown
-                document.querySelectorAll('.dropdown-menu a.dropdown-item').forEach(item => {
-                    // Pour les boutons Statistiques et Campagnes, rediriger vers la bonne URL
-                    if (item.innerHTML.includes('Statistiques') || item.innerHTML.includes('Campagnes')) {
-                        item.addEventListener('click', function(e) {
-                            e.preventDefault();
-
-                            // Récupérer l'ID de l'utilisateur
-                            const dropdown = this.closest('.dropdown');
-                            const button = dropdown.querySelector('button');
-                            const userId = button.id.split('-')[1] || button.getAttribute(
-                                'data-user-id');
-
-                            // Déterminer l'action
-                            const action = this.innerHTML.includes('Statistiques') ? 'stats' :
-                                'campaigns';
-
-                            // Rediriger vers l'URL avec l'action et l'ID
-                            const currentUrl = new URL(window.location.href);
-                            const baseUrl = currentUrl.pathname.split('?')[0];
-                            window.location.href = `${baseUrl}?action=${action}&id=${userId}`;
-                        });
-                    }
+                    document.getElementById('delete-user-id').value = userId;
+                    document.getElementById('delete-user-name').textContent = userName;
                 });
+            }
 
-                // 2. Gestion du changement de statut (toggle)
-                document.querySelectorAll('.toggle-status').forEach(toggle => {
-                    toggle.addEventListener('change', function() {
-                        const userId = this.getAttribute('data-user-id');
-                        const enabled = this.checked ? 1 : 0;
-                        const statusLabel = this.closest('.form-check').querySelector(
+            // Initialize Select2 for dropdowns if available
+            if (typeof $.fn.select2 !== 'undefined') {
+                $('.select2').select2({
+                    theme: 'bootstrap-5'
+                });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Récupérer le jeton CSRF
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                document.querySelector('input[name="_token"]')?.value;
+
+            // 1. Gestion des boutons du dropdown
+            /* document.querySelectorAll('.dropdown-menu a.dropdown-item').forEach(item => {
+                // Pour les boutons Statistiques et Campagnes, rediriger vers la bonne URL
+                if (item.innerHTML.includes('Statistiques') || item.innerHTML.includes('Campagnes')) {
+                    item.addEventListener('click', function(e) {
+                        e.preventDefault();
+
+                        // Récupérer l'ID de l'utilisateur
+                        const dropdown = this.closest('.dropdown');
+                        const button = dropdown.querySelector('button');
+                        const userId = button.id.split('-')[1] || button.getAttribute(
+                            'data-user-id');
+
+                        // Déterminer l'action
+                        const action = this.innerHTML.includes('Statistiques') ? 'stats' :
+                            'campaigns';
+
+                        // Rediriger vers l'URL avec l'action et l'ID
+                        const currentUrl = new URL(window.location.href);
+                        const baseUrl = currentUrl.pathname.split('?')[0];
+                        window.location.href = `${baseUrl}?action=${action}&id=${userId}`;
+                    });
+                }
+            }); */
+
+            // 2. Gestion du changement de statut (toggle)
+            document.querySelectorAll('.toggle-status').forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const userId = this.getAttribute('data-user-id');
+                    const enabled = this.checked ? 1 : 0;
+                    const statusLabel = this.closest('.form-check').querySelector(
                             '.status-label') ||
-                            this.nextElementSibling;
+                        this.nextElementSibling;
 
-                        // Mise à jour visuelle immédiate
-                        if (statusLabel) {
-                            if (this.checked) {
-                                statusLabel.innerHTML = '<span class="text-success">Actif</span>';
-                            } else {
-                                statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
-                            }
+                    // Mise à jour visuelle immédiate
+                    if (statusLabel) {
+                        if (this.checked) {
+                            statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+                        } else {
+                            statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
                         }
+                    }
 
-                        // Envoyer la requête AJAX
-                        fetch(window.location.pathname, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': csrfToken,
-                                    'Accept': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    action: 'toggle_status',
-                                    user_id: userId,
-                                    enabled: enabled
-                                })
+                    // Envoyer la requête AJAX
+                    fetch(window.location.pathname, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: 'toggle_status',
+                                user_id: userId,
+                                enabled: enabled
                             })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (!data.success) {
-                                    // Réinitialiser le toggle en cas d'erreur
-                                    this.checked = !this.checked;
-                                    if (statusLabel) {
-                                        if (this.checked) {
-                                            statusLabel.innerHTML =
-                                                '<span class="text-success">Actif</span>';
-                                        } else {
-                                            statusLabel.innerHTML =
-                                                '<span class="text-danger">Inactif</span>';
-                                        }
-                                    }
-
-                                    // Afficher l'erreur
-                                    alert(data.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.success) {
                                 // Réinitialiser le toggle en cas d'erreur
                                 this.checked = !this.checked;
                                 if (statusLabel) {
@@ -546,67 +567,50 @@
                                     }
                                 }
 
-                                alert('Une erreur est survenue lors de la modification du statut');
-                            });
-                    });
-                });
-
-                // 3. Configuration du modal de suppression
-                const deleteModal = document.getElementById('deleteModal');
-                if (deleteModal) {
-                    deleteModal.addEventListener('show.bs.modal', function(event) {
-                        const button = event.relatedTarget;
-                        const userId = button.getAttribute('data-user-id');
-                        const userName = button.getAttribute('data-user-name');
-
-                        const userNameSpan = this.querySelector('#delete-user-name');
-                        const userIdInput = this.querySelector('#delete-user-id');
-
-                        if (userNameSpan) userNameSpan.textContent = userName;
-                        if (userIdInput) userIdInput.value = userId;
-
-                        // Configurer l'action du formulaire
-                        const form = this.querySelector('form#delete-user-form');
-                        if (form) form.action = window.location.pathname;
-                    });
-                }
-
-                // 4. Interaction entre les filtres pays et localités
-                const countrySelect = document.getElementById('filtre_country');
-                const localitySelect = document.getElementById('filtre_locality');
-
-                if (countrySelect && localitySelect) {
-                    countrySelect.addEventListener('change', function() {
-                        const selectedCountryId = this.value;
-
-                        // Vider la liste des localités
-                        localitySelect.innerHTML = '<option value="all">Toutes les localités</option>';
-
-                        if (selectedCountryId !== 'all' && selectedCountryId !== '') {
-                            try {
-                                // Récupérer les données de localités depuis l'élément caché
-                                const localitiesJson = document.getElementById('localitiesJson');
-                                if (localitiesJson) {
-                                    const localities = JSON.parse(localitiesJson.value);
-
-                                    // Filtrer et ajouter les localités correspondant au pays sélectionné
-                                    localities
-                                        .filter(locality => locality.country_id == selectedCountryId)
-                                        .forEach(locality => {
-                                            const option = document.createElement('option');
-                                            option.value = locality.id;
-                                            option.textContent = locality.name;
-                                            localitySelect.appendChild(option);
-                                        });
-                                }
-                            } catch (error) {
-                                console.error('Erreur lors du chargement des localités:', error);
+                                // Afficher l'erreur
+                                alert(data.message);
                             }
-                        }
-                    });
-                }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+
+                            // Réinitialiser le toggle en cas d'erreur
+                            this.checked = !this.checked;
+                            if (statusLabel) {
+                                if (this.checked) {
+                                    statusLabel.innerHTML =
+                                        '<span class="text-success">Actif</span>';
+                                } else {
+                                    statusLabel.innerHTML =
+                                        '<span class="text-danger">Inactif</span>';
+                                }
+                            }
+
+                            alert('Une erreur est survenue lors de la modification du statut');
+                        });
+                });
             });
-        </script>
-    @endpush
+
+            // 3. Configuration du modal de suppression
+            const deleteModal = document.getElementById('deleteModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    const userId = button.getAttribute('data-user-id');
+                    const userName = button.getAttribute('data-user-name');
+
+                    const userNameSpan = this.querySelector('#delete-user-name');
+                    const userIdInput = this.querySelector('#delete-user-id');
+
+                    if (userNameSpan) userNameSpan.textContent = userName;
+                    if (userIdInput) userIdInput.value = userId;
+
+                    // Configurer l'action du formulaire
+                    const form = this.querySelector('form#delete-user-form');
+                    if (form) form.action = window.location.pathname;
+                });
+            }
+        });
+    </script>
 
 @endsection

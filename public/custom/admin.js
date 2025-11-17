@@ -972,7 +972,6 @@ function initializeCharts() {
   }
 
   // Weekday Traffic Chart
-
   const weekdayData = stats.weekday_data;
   const weekdayLabels = Object.keys(weekdayData);
   const weekdayValues = Object.values(weekdayData);
@@ -1210,6 +1209,27 @@ if (
         alert("Soumission rejetée avec succès !");
       }
     });
+
+    // Delete task
+    $(".delete-task").on("click", function () {
+      const taskId = $(this).data("task-id");
+      $("#deleteTaskForm").attr("action", `/admin/task/${taskId}/delete`);
+      $("#deleteTaskModal").modal("show");
+    });
+  });
+}
+
+if (window.location.pathname == "/admin/announcer/campaigns") {
+  // Delete Campaign on Annonceur Dash
+  $(".delete-campaign").on("click", function () {
+    console.log("ok");
+
+    const campaignId = $(this).data("campaign-id");
+    $("#deleteCampaignForm").attr(
+      "action",
+      `/admin/announcer/campaigns/${campaignId}`
+    );
+    $("#deleteCampaignModal").modal("show");
   });
 }
 
@@ -1537,5 +1557,476 @@ if (window.location.pathname.startsWith("/admin/task")) {
       // Si tout est valide
       return true;
     });
+  });
+}
+
+if (window.location.pathname == "/admin/dashboard") {
+  $(document).ready(function () {
+    const taskStats = window.TASK_STATS;
+    const userStats = window.USER_STATS;
+
+    // -------------------------------
+    // Task Status Chart
+    // -------------------------------
+    const taskCtx = document.getElementById("taskStatusChart").getContext("2d");
+
+    const taskStatusChart = new Chart(taskCtx, {
+      type: "bar",
+      data: {
+        labels: ["En attente", "Acceptées", "Payées", "Rejetées", "Fermées"],
+        datasets: [
+          {
+            label: "Nombre de Campagnes",
+            data: [
+              taskStats.pending ?? 0,
+              taskStats.accepted ?? 0,
+              taskStats.paid ?? 0,
+              taskStats.rejected ?? 0,
+              taskStats.closed ?? 0,
+            ],
+            backgroundColor: [
+              "rgba(255, 193, 7, 0.7)",
+              "rgba(13, 110, 253, 0.7)",
+              "rgba(25, 135, 84, 0.7)",
+              "rgba(220, 53, 69, 0.7)",
+              "rgba(108, 117, 125, 0.7)",
+            ],
+            borderColor: [
+              "rgba(255, 193, 7, 1)",
+              "rgba(13, 110, 253, 1)",
+              "rgba(25, 135, 84, 1)",
+              "rgba(220, 53, 69, 1)",
+              "rgba(108, 117, 125, 1)",
+            ],
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+            },
+          },
+        },
+      },
+    });
+
+    // -------------------------------
+    // User Distribution Chart
+    // -------------------------------
+    const userCtx = document
+      .getElementById("userDistributionChart")
+      .getContext("2d");
+
+    const userDistributionChart = new Chart(userCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["Diffuseurs", "Annonceurs", "Administrateurs"],
+        datasets: [
+          {
+            data: [
+              userStats.influencers ?? 0,
+              userStats.announcers ?? 0,
+              userStats.admins ?? 0,
+            ],
+            backgroundColor: [
+              "rgba(13, 110, 253, 0.7)",
+              "rgba(25, 135, 84, 0.7)",
+              "rgba(220, 53, 69, 0.7)",
+            ],
+            borderColor: [
+              "rgba(13, 110, 253, 1)",
+              "rgba(25, 135, 84, 1)",
+              "rgba(220, 53, 69, 1)",
+            ],
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+        cutout: "60%",
+      },
+    });
+  });
+}
+
+if (window.location.pathname == "/admin/client/dashboard") {
+  $(document).ready(function () {
+    const taskStats = window.taskStats;
+    const paidBudget = window.paidBudget;
+    const pendingBudget = window.pendingBudget;
+    const remainingBudget = window.remainingBudget;
+    // DataTable initialization
+    $("#client-tasks-table").DataTable({
+      language: {
+        url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json",
+      },
+    });
+
+    // ApexCharts Budget Overview
+    var options = {
+      chart: {
+        type: "bar",
+        height: 320,
+      },
+      series: [
+        {
+          name: "Budget",
+          data: [paidBudget, pendingBudget, remainingBudget],
+        },
+      ],
+      xaxis: {
+        categories: ["Payé", "En cours", "Restant"],
+      },
+      colors: ["#28a745", "#ffc107", "#0d6efd"],
+    };
+    var chart = new ApexCharts(
+      document.querySelector("#budget-overview-chart"),
+      options
+    );
+    chart.render();
+
+    // ApexCharts Campaign Status
+    var statusOptions = {
+      chart: {
+        type: "pie",
+        height: 320,
+      },
+      series: [
+        taskStats.pending ?? 0,
+        taskStats.accepted ?? 0,
+        taskStats.rejected ?? 0,
+      ],
+      labels: ["En attente", "Acceptées", "Rejetées"],
+      colors: ["#ffc107", "#0d6efd", "#dc3545"],
+    };
+    var statusChart = new ApexCharts(
+      document.querySelector("#campaign-status-chart"),
+      statusOptions
+    );
+    statusChart.render();
+  });
+}
+
+if (window.location.pathname == "/admin/users_diffuseur") {
+  $(document).ready(function () {
+    const countriesList = window.COUNTRIES_LIST;
+    const localitiesList = window.LOCALITIES_LIST;
+
+    // Initialize DataTable
+    /* const dataTable = $("#items_datatable").DataTable({
+      responsive: true,
+      dom: "Bfrtip",
+      buttons: ["copyHtml5", "excelHtml5", "csvHtml5", "pdfHtml5"],
+      lengthMenu: [
+        [10, 20, 50, -1],
+        [10, 20, 50, "Tous"],
+      ],
+      pageLength: 20, // Affiche 20 données par page
+      language: {
+        url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json",
+      },
+    }); */
+
+    // Export buttons
+    document
+      .getElementById("export-excel")
+      .addEventListener("click", function () {
+        dataTable.button(".buttons-excel").trigger();
+      });
+
+    document
+      .getElementById("export-pdf")
+      .addEventListener("click", function () {
+        dataTable.button(".buttons-pdf").trigger();
+      });
+
+    document
+      .getElementById("export-csv")
+      .addEventListener("click", function () {
+        dataTable.button(".buttons-csv").trigger();
+      });
+
+    const countrySelect = document.getElementById("filtre_country");
+    const localitySelect = document.getElementById("filtre_locality");
+
+    const DEFAULT_LOCALITY_OPTION_HTML =
+      '<option value="">Toutes les localités</option>';
+
+    // === Fonction principale ===
+    function populateLocalitiesForCountry(countryId, selectedLocality = "") {
+      // Reset
+      localitySelect.innerHTML = DEFAULT_LOCALITY_OPTION_HTML;
+
+      // Trouver le pays sélectionné
+      const country = countriesList.find(
+        (c) => String(c.id) === String(countryId)
+      );
+
+      if (!country || country.name !== "Benin") {
+        // Si ce n'est pas le Bénin → localités vides
+        $("#filtre_locality").trigger("change.select2");
+        return;
+      }
+
+      // Filtrer les localités du pays
+      const filtered = localitiesList.filter(
+        (l) => String(l.country_id) === String(countryId)
+      );
+
+      // Ajouter options
+      filtered.forEach((loc) => {
+        const option = document.createElement("option");
+        option.value = loc.id;
+        option.textContent = loc.name;
+
+        if (String(loc.id) === String(selectedLocality)) {
+          option.selected = true;
+        }
+
+        localitySelect.appendChild(option);
+      });
+
+      $("#filtre_locality").trigger("change.select2");
+    }
+
+    // === Listener du select pays ===
+    if (countrySelect && localitySelect) {
+      $("#filtre_country").on("change.select2", function () {
+        const countryId = this.value;
+
+        const selectedLocality = localitySelect.dataset.selected || "";
+        populateLocalitiesForCountry(countryId, selectedLocality);
+      });
+
+      // Initialisation au chargement
+      const initCountry = countrySelect.value || "";
+      const selectedLocality = localitySelect.dataset.selected || "";
+
+      if (initCountry !== "") {
+        populateLocalitiesForCountry(initCountry, selectedLocality);
+      }
+    }
+
+    // ---- Reset du formulaire (y compris Select2) ----
+    const filterForm = document.querySelector("form.form.theme-form");
+    if (filterForm) {
+      filterForm.addEventListener("reset", function () {
+        // timeout pour laisser le reset natif s'appliquer
+        setTimeout(() => {
+          // Select2 (si installé)
+          if (typeof $ !== "undefined" && typeof $.fn.select2 !== "undefined") {
+            $(".select2").val("").trigger("change");
+            $(".select2-multiple").val([]).trigger("change");
+          } else {
+            // fallback vanilla : remettre à la valeur par défaut (premier option)
+            document.querySelectorAll("select").forEach((s) => {
+              if (s.multiple) {
+                Array.from(s.options).forEach((opt) => (opt.selected = false));
+              } else {
+                s.selectedIndex = 0;
+              }
+            });
+          }
+
+          // remettre la liste des localités à l'état initial
+          if (localitySelect)
+            localitySelect.innerHTML = DEFAULT_LOCALITY_OPTION_HTML;
+        }, 50);
+      });
+    }
+
+    // Delete modal
+    const deleteModal = document.getElementById("deleteModal");
+    if (deleteModal) {
+      deleteModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const id = button.getAttribute("data-id");
+        const name = button.getAttribute("data-name");
+
+        document.getElementById("delete-user-name").textContent = name;
+      });
+    }
+
+    // Initialize Select2 for dropdowns if available
+    if (typeof $.fn.select2 !== "undefined") {
+      $(".select2").select2({
+        theme: "bootstrap-5",
+      });
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Récupérer le jeton CSRF
+    const csrfToken =
+      document
+        .querySelector('meta[name="csrf-token"]')
+        ?.getAttribute("content") ||
+      document.querySelector('input[name="_token"]')?.value;
+
+    // 1. Gestion des boutons du dropdown
+    /* document
+      .querySelectorAll(".dropdown-menu a.dropdown-item")
+      .forEach((item) => {
+        // Pour les boutons Statistiques et Campagnes, rediriger vers la bonne URL
+        if (
+          item.innerHTML.includes("Statistiques") ||
+          item.innerHTML.includes("Campagnes")
+        ) {
+          item.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Récupérer l'ID de l'utilisateur
+            const userId = this.getAttribute("data-user-id");
+
+            // Déterminer l'action
+            const action = this.innerHTML.includes("Statistiques")
+              ? "stats"
+              : "campaigns";
+
+            // Rediriger vers l'URL avec l'action et l'ID
+            const currentUrl = new URL(window.location.href);
+            const baseUrl = currentUrl.pathname.split("?")[0];
+            window.location.href = `${baseUrl}?action=${action}&id=${userId}`;
+          });
+        }
+      }); */
+
+    // 2. Gestion du changement de statut (toggle)
+    document.querySelectorAll(".toggle-status").forEach((toggle) => {
+      toggle.addEventListener("change", function () {
+        const userId = this.getAttribute("data-user-id");
+        const enabled = this.checked ? 1 : 0;
+        const statusLabel =
+          this.closest(".form-check").querySelector(".status-label") ||
+          this.nextElementSibling;
+
+        // Mise à jour visuelle immédiate
+        if (statusLabel) {
+          if (this.checked) {
+            statusLabel.innerHTML = '<span class="text-success">Actif</span>';
+          } else {
+            statusLabel.innerHTML = '<span class="text-danger">Inactif</span>';
+          }
+        }
+
+        // Envoyer la requête AJAX
+        fetch(window.location.pathname, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfToken,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            action: "toggle_status",
+            user_id: userId,
+            enabled: enabled,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.success) {
+              // Réinitialiser le toggle en cas d'erreur
+              this.checked = !this.checked;
+              if (statusLabel) {
+                if (this.checked) {
+                  statusLabel.innerHTML =
+                    '<span class="text-success">Actif</span>';
+                } else {
+                  statusLabel.innerHTML =
+                    '<span class="text-danger">Inactif</span>';
+                }
+              }
+
+              // Afficher l'erreur
+              alert(data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+
+            // Réinitialiser le toggle en cas d'erreur
+            this.checked = !this.checked;
+            if (statusLabel) {
+              if (this.checked) {
+                statusLabel.innerHTML =
+                  '<span class="text-success">Actif</span>';
+              } else {
+                statusLabel.innerHTML =
+                  '<span class="text-danger">Inactif</span>';
+              }
+            }
+
+            alert("Une erreur est survenue lors de la modification du statut");
+          });
+      });
+    });
+
+    // 3. Configuration du modal de suppression
+    const deleteModal = document.getElementById("deleteModal");
+    if (deleteModal) {
+      deleteModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+
+        const userId = button.getAttribute("data-id");
+        const userName = button.getAttribute("data-name");
+
+        this.querySelector("#delete-user-name").textContent = userName;
+        this.querySelector("#delete-user-id").value = userId;
+
+        // Configurer l'action du formulaire
+        const form = this.querySelector("form#delete-user-form");
+        if (form) form.action = `${window.location.pathname}/delete/${userId}`;
+      });
+    }
+
+    // 4. Interaction entre les filtres pays et localités
+    const countrySelect = document.getElementById("filtre_country");
+    const localitySelect = document.getElementById("filtre_locality");
+
+    if (countrySelect && localitySelect) {
+      countrySelect.addEventListener("change", function () {
+        const selectedCountryId = this.value;
+
+        // Vider la liste des localités
+        localitySelect.innerHTML =
+          '<option value="all">Toutes les localités</option>';
+
+        if (selectedCountryId !== "all" && selectedCountryId !== "") {
+          try {
+            // Récupérer les données de localités depuis l'élément caché
+            const localitiesJson = document.getElementById("localitiesJson");
+            if (localitiesJson) {
+              const localities = JSON.parse(localitiesJson.value);
+
+              // Filtrer et ajouter les localités correspondant au pays sélectionné
+              localities
+                .filter((locality) => locality.country_id == selectedCountryId)
+                .forEach((locality) => {
+                  const option = document.createElement("option");
+                  option.value = locality.id;
+                  option.textContent = locality.name;
+                  localitySelect.appendChild(option);
+                });
+            }
+          } catch (error) {
+            console.error("Erreur lors du chargement des localités:", error);
+          }
+        }
+      });
+    }
   });
 }

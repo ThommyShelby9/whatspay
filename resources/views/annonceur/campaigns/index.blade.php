@@ -93,8 +93,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button type="submit" class="btn btn-primary w-100">
+                                    <div class="col-md-2 d-flex align-items-center">
+                                        <button type="submit" class="btn btn-primary w-100 mt-2">
                                             <i class="fa fa-search me-2"></i>Filtrer
                                         </button>
                                     </div>
@@ -204,6 +204,12 @@
                                                         data-campaign-id="{{ $campaign->id }}">
                                                         <i class="fa fa-users"></i>
                                                     </a>
+                                                    @if ($campaign->status == 'PENDING')
+                                                        <button class="btn btn-danger btn-sm delete-campaign"
+                                                            data-campaign-id="{{ $campaign->id }}">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -242,6 +248,30 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Task Modal -->
+    <div class="modal fade" id="deleteCampaignModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Supprimer la Campagne</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="deleteCampaignForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <div class="modal-body">
+                        <p>Êtes-vous sûr de vouloir supprimer cette Campagne ?</p>
+                        <p class="text-danger">Cette action est irréversible.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

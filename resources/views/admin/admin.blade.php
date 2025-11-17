@@ -10,13 +10,12 @@
                 <div class="page-title-box">
                     <div class="row">
                         <div class="col">
-                            <h4 class="page-title">Gestion des Utilisateurs</h4>
                             <ol class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
                                 <li class="breadcrumb-item active">Utilisateurs</li>
                             </ol>
                         </div>
-                        <div class="col-auto">
+                        {{-- <div class="col-auto">
                             <div class="d-flex">
                                 <div class="dropdown">
                                     <button class="btn btn-outline-primary dropdown-toggle" type="button"
@@ -38,175 +37,186 @@
                                     </ul>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Filters -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <form action="{{ route('admin.users', ['group' => request()->route('group')]) }}" method="GET"
-                            class="row g-3">
-                            <div class="col-md-3">
-                                <label for="country" class="form-label">Pays</label>
-                                <select class="form-select" id="country" name="country_id">
-                                    <option value="">Tous les pays</option>
-                                    @foreach ($viewData['countries'] ?? [] as $country)
-                                        <option value="{{ $country->id }}"
-                                            {{ request('country_id') == $country->id ? 'selected' : '' }}>
-                                            {{ $country->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="locality" class="form-label">Localité</label>
-                                <select class="form-select" id="locality" name="locality_id">
-                                    <option value="">Toutes les localités</option>
-                                    @foreach ($viewData['localities'] ?? [] as $locality)
-                                        <option value="{{ $locality->id }}"
-                                            @if (isset($viewData['filtre_country']) && $locality->id == $viewData['filtre_country']) selected @endif>{{ $locality->name }}
-                                            {{ $locality->emoji ?? '' }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            @if (request()->route('group') == 'diffuseur')
+        @if (!request()->has('action'))
+            <!-- Filters -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <form action="{{ route('admin.users', ['group' => request()->route('group')]) }}" method="GET"
+                                class="row g-3">
                                 <div class="col-md-3">
-                                    <label for="category" class="form-label">Catégorie</label>
-                                    <select class="form-select" id="category" name="category_id">
-                                        <option value="">Toutes les catégories</option>
-                                        @foreach ($viewData['categories'] ?? [] as $category)
-                                            <option value="{{ $category->id }}"
-                                                {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                                {{ $category->name }}</option>
+                                    <label for="country" class="form-label">Pays</label>
+                                    <select class="form-select" id="country" name="country_id">
+                                        <option value="">Tous les pays</option>
+                                        @foreach ($viewData['countries'] ?? [] as $country)
+                                            <option value="{{ $country->id }}"
+                                                {{ request('country_id') == $country->id ? 'selected' : '' }}>
+                                                {{ $country->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                            @endif
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary me-2">Filtrer</button>
-                                <a href="{{ route('admin.users', ['group' => request()->route('group')]) }}"
-                                    class="btn btn-outline-secondary">Réinitialiser</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Users Table -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Liste des Utilisateurs
-                            @if (request()->route('group') == 'all')
-                                (Tous)
-                            @elseif(request()->route('group') == 'admin')
-                                (Administrateurs)
-                            @elseif(request()->route('group') == 'annonceur')
-                                (Annonceurs)
-                            @elseif(request()->route('group') == 'diffuseur')
-                                (Diffuseurs)
-                            @endif
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nom</th>
-                                        <th>Email</th>
-                                        <th>Profil</th>
-                                        <th>Pays</th>
-                                        @if (request()->route('group') == 'diffuseur')
-                                            <th>Vues</th>
-                                            <th>Catégories</th>
-                                        @endif
-                                        <th>Statut</th>
-                                        <th>Date d'inscription</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($viewData['users'] ?? [] as $user)
-                                        <tr>
-                                            <td>{{ $user->id }}</td>
-                                            <td>{{ $user->firstname }} {{ $user->lastname }}</td>
-                                            <td>{{ $user->email }}</td>
-                                            <td>
-                                                @if (strpos($user->profiles ?? '', 'DIFFUSEUR') !== false)
-                                                    <span class="badge bg-primary">Diffuseur</span>
-                                                @elseif(strpos($user->profiles ?? '', 'ANNONCEUR') !== false)
-                                                    <span class="badge bg-success">Annonceur</span>
-                                                @elseif(strpos($user->profiles ?? '', 'ADMIN') !== false)
-                                                    <span class="badge bg-danger">Admin</span>
-                                                @else
-                                                    <span class="badge bg-secondary">{{ $user->profiles ?? 'N/A' }}</span>
-                                                @endif
-                                            </td>
-                                            <td>{{ $user->country }}</td>
-                                            @if (request()->route('group') == 'diffuseur')
-                                                <td>{{ number_format($user->vuesmoyen ?? 0) }}</td>
-                                                <td>{{ $user->category ?? 'N/A' }}</td>
-                                            @endif
-                                            <td>
-                                                <form
-                                                    action="{{ route('admin.users.update', ['group' => request()->route('group')]) }}"
-                                                    method="POST" class="toggle-status-form">
-                                                    @csrf
-                                                    <input type="hidden" name="user_id" value="{{ $user->id }}">
-                                                    <input type="hidden" name="action" value="toggle_status">
-                                                    <div class="form-check form-switch">
-                                                        <input class="form-check-input toggle-status" type="checkbox"
-                                                            role="switch" name="enabled" value="1"
-                                                            onchange="this.form.submit()"
-                                                            {{ $user->enabled ? 'checked' : '' }}>
-                                                    </div>
-                                                </form>
-                                            </td>
-                                            <td>{{ date('d/m/Y', strtotime($user->created_at)) }}</td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'view', 'id' => $user->id]) }}"
-                                                        class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'edit', 'id' => $user->id]) }}"
-                                                        class="btn btn-sm btn-warning">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="{{ request()->route('group') == 'diffuseur' ? 9 : 7 }}"
-                                                class="text-center">Aucun utilisateur trouvé</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                                <div class="col-md-3">
+                                    <label for="locality" class="form-label">Localité</label>
+                                    <select class="form-select" id="locality" name="locality_id">
+                                        <option value="">Toutes les localités</option>
+                                        @foreach ($viewData['localities'] ?? [] as $locality)
+                                            <option value="{{ $locality->id }}"
+                                                @if (isset($viewData['filtre_country']) && $locality->id == $viewData['filtre_country']) selected @endif>{{ $locality->name }}
+                                                {{ $locality->emoji ?? '' }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @if (request()->route('group') == 'diffuseur')
+                                    <div class="col-md-3">
+                                        <label for="category" class="form-label">Catégorie</label>
+                                        <select class="form-select" id="category" name="category_id">
+                                            <option value="">Toutes les catégories</option>
+                                            @foreach ($viewData['categories'] ?? [] as $category)
+                                                <option value="{{ $category->id }}"
+                                                    {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                                    {{ $category->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <a href="{{ route('admin.users', ['group' => request()->route('group')]) }}"
+                                        class="btn btn-light me-2">Réinitialiser</a>
+                                    <button type="submit" class="btn btn-primary me-2">Filtrer</button>
+                                </div>
+                            </form>
                         </div>
-
-                        <!-- Pagination (if available) -->
-                        @if (isset($viewData['pagination']))
-                            <div class="d-flex justify-content-center mt-4">
-                                {{ $viewData['pagination'] }}
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- User Details (if viewing a user) -->
-        @if (request('action') == 'view' && isset($viewData['userDetails']))
+            <!-- Users Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Liste des Utilisateurs
+                                @if (request()->route('group') == 'all')
+                                    (Tous)
+                                @elseif(request()->route('group') == 'admin')
+                                    (Administrateurs)
+                                @elseif(request()->route('group') == 'annonceur')
+                                    (Annonceurs)
+                                @elseif(request()->route('group') == 'diffuseur')
+                                    (Diffuseurs)
+                                @endif
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nom</th>
+                                            <th>Email</th>
+                                            <th>Profil</th>
+                                            <th>Pays</th>
+                                            @if (request()->route('group') == 'diffuseur')
+                                                <th>Vues</th>
+                                                <th>Catégories</th>
+                                            @endif
+                                            <th>Statut</th>
+                                            <th>Date d'inscription</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($viewData['items'] ?? [] as $user)
+                                            <tr>
+                                                <td>{{ $user->id }}</td>
+                                                <td>{{ $user->firstname }} {{ $user->lastname }}</td>
+                                                <td>{{ $user->email }}</td>
+                                                <td>
+                                                    @if (strpos($user->profiles ?? '', 'DIFFUSEUR') !== false)
+                                                        <span class="badge bg-primary">Diffuseur</span>
+                                                    @elseif(strpos($user->profiles ?? '', 'ANNONCEUR') !== false)
+                                                        <span class="badge bg-success">Annonceur</span>
+                                                    @elseif(strpos($user->profiles ?? '', 'ADMIN') !== false)
+                                                        <span class="badge bg-danger">Admin</span>
+                                                    @else
+                                                        <span
+                                                            class="badge bg-secondary">{{ $user->profiles ?? 'N/A' }}</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $user->country }}</td>
+                                                @if (request()->route('group') == 'diffuseur')
+                                                    <td>{{ number_format($user->vuesmoyen ?? 0) }}</td>
+                                                    <td>{{ $user->category ?? 'N/A' }}</td>
+                                                @endif
+                                                <td>
+                                                    <div class="form-check form-switch">
+                                                        <label class="form-check-label status-label">
+                                                            @if (isset($user->enabled) && $user->enabled)
+                                                                <span class="text-success">Actif</span>
+                                                            @else
+                                                                <span class="text-danger">Inactif</span>
+                                                            @endif
+                                                        </label>
+                                                    </div>
+                                                    {{-- <form
+                                                        action="{{ route('admin.users.update', ['group' => request()->route('group'), 'userId' => $user->id]) }}"
+                                                        method="POST" class="toggle-status-form">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="user_id" value="{{ $user->id }}">
+                                                        <input type="hidden" name="action" value="toggle_status">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input toggle-status" type="checkbox"
+                                                                role="switch" name="enabled" value="1"
+                                                                onchange="this.form.submit()"
+                                                                {{ $user->enabled ? 'checked' : '' }}>
+                                                        </div>
+                                                    </form> --}}
+                                                </td>
+                                                <td>{{ date('d/m/Y', strtotime($user->created_at)) }}</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'view', 'id' => $user->id]) }}"
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ route('admin.users', ['group' => request()->route('group'), 'action' => 'edit', 'id' => $user->id]) }}"
+                                                            class="btn btn-sm btn-warning">
+                                                            <i class="fa fa-edit"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="{{ request()->route('group') == 'diffuseur' ? 9 : 7 }}"
+                                                    class="text-center">Aucun utilisateur trouvé</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination (if available) -->
+                            @if (isset($viewData['pagination']))
+                                <div class="d-flex justify-content-center mt-4">
+                                    {{ $viewData['pagination'] }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Details (if viewing a user) -->
+        @elseif (request('action') == 'view' && isset($viewData['userDetails']))
             <div class="row mt-4">
                 <div class="col-12">
                     <div class="card">
@@ -312,10 +322,9 @@
                     </div>
                 </div>
             </div>
-        @endif
 
-        <!-- Edit User Form (if editing a user) -->
-        @if (request('action') == 'edit' && isset($viewData['userDetails']))
+            <!-- Edit User Form (if editing a user) -->
+        @elseif (request('action') == 'edit' && isset($viewData['userDetails']))
             <div class="row mt-4">
                 <div class="col-12">
                     <div class="card">
@@ -323,9 +332,11 @@
                             <h5 class="card-title mb-0">Modifier l'utilisateur</h5>
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('admin.users.update', ['group' => request()->route('group')]) }}"
+                            <form
+                                action="{{ route('admin.users.update', ['group' => request()->route('group'), 'userId' => $viewData['userDetails']->id]) }}"
                                 method="POST">
                                 @csrf
+                                @method('PUT')
                                 <input type="hidden" name="user_id" value="{{ $viewData['userDetails']->id }}">
                                 <input type="hidden" name="action" value="update_user">
 

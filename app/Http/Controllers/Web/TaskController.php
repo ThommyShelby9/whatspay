@@ -136,7 +136,6 @@ class TaskController extends Controller
         $viewData["categories"] = Category::where('enabled', true)->orderBy('name')->get();
         $viewData["localities"] = Locality::where('type', 2)->orderBy('name')->get();
         $viewData["occupations"] = Occupation::where('enabled', true)->orderBy('name')->get();
-        $viewData["stats"] = $this->trackingService->getTaskStatistics($id);
 
         // Selon l'ID, on affiche un nouveau formulaire ou une campagne existante
         switch ($id) {
@@ -144,6 +143,7 @@ class TaskController extends Controller
                 $viewData["task"] = new Task();
                 break;
             default:
+                $viewData["stats"] = $this->trackingService->getTaskStatistics($id);
                 // Récupérer les détails de la campagne
                 $task = $this->taskService->getTaskWithRelations($id);
                 if (!$task) {

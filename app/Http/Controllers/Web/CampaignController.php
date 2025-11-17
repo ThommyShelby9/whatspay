@@ -14,6 +14,7 @@ use App\Models\Locality;
 use App\Models\Occupation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CampaignController extends Controller
 {
@@ -101,7 +102,7 @@ class CampaignController extends Controller
         $campaign = $this->taskService->getTaskById($id);
 
         if (!$campaign || $campaign->client_id != $userId) {
-            return redirect()->route('annonceur.campaigns.index')
+            return redirect()->route('announcer.campaigns.index')
                 ->with('type', 'danger')
                 ->with('message', 'Campagne non trouvée ou non autorisée');
         }
@@ -436,12 +437,44 @@ class CampaignController extends Controller
         }
     }
 
+    public function delete(Request $request, string $id)
+    {
+        $viewData = [];
+        $alert = [];
+        $this->setAlert($request, $alert);
+
+        if (!$this->isConnected()) {
+            return redirect(config('app.url') . '/admin/login')->with($alert);
+        }
+
+        $result = $this->taskService->deleteTask($id);
+
+        if ($result['success']) {
+            $alert = [
+                'message' => 'Campagne supprimée avec succès',
+                'type' => 'success'
+            ];
+        } else {
+            $alert = [
+                'message' => $result['message'],
+                'type' => 'danger'
+            ];
+        }
+
+        return redirect(config('app.url') . '/admin/announcer/campaigns')->with($alert);
+    }
+
     private function setAlert(Request &$request, &$alert)
     {
         $alert = [
             'message' => (!empty($request->message) ? $request->message : (!empty(session('message')) ? session('message') : "")),
             'type' => (!empty($request->type) ? $request->type : (!empty(session('type')) ? session('type') : "success")),
         ];
+    }
+
+    private function isConnected()
+    {
+        return (Auth::viaRemember() || Auth::check());
     }
 
     private function setViewData(Request &$request, &$viewData)

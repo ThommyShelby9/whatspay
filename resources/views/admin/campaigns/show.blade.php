@@ -114,11 +114,12 @@
                                             <div>
                                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                                                     data-bs-target="#editCampaignModal">
-                                                    <i class="fas fa-edit me-1"></i>Modifier
+                                                    <i class="fa fa-edit me-1"></i>Modifier
                                                 </button>
 
-                                                <button type="button" class="btn btn-danger ms-2">
-                                                    <i class="fas fa-trash-alt me-1"></i>Supprimer
+                                                <button type="button" class="btn btn-danger ms-2 delete-task"
+                                                    data-task-id="{{ $task->id }}">
+                                                    <i class="fa fa-trash me-1"></i>Supprimer
                                                 </button>
                                             </div>
                                         </div>
@@ -739,7 +740,30 @@
         </div>
     </div>
 
+    <!-- Delete Task Modal -->
+    <div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Supprimer la Campagne</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="deleteTaskForm" method="POST">
+                    <div class="modal-body">
+                        <p>Êtes-vous sûr de vouloir supprimer cette Campagne ?</p>
+                        <p class="text-danger">Cette action est irréversible.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                    </div>
+                    @csrf
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
-        window.GLOBAL_STATS = @json($viewData['stats'])
+        window.GLOBAL_STATS = @json($viewData['stats']);
     </script>
 @endsection

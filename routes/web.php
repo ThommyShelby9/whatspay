@@ -123,6 +123,7 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     */
     Route::get('/users_{group}', [UserController::class, 'usersGet'])->name('admin.users');
     Route::post('/users_{group}', [UserController::class, 'usersPost']);
+    Route::put('/user_{group}/update/{userId}', [UserController::class, 'updateUser'])->name('admin.users.update');
     Route::post('/users_{group}/delete/{userId}', [UserController::class, 'deleteUserById'])->name('admin.users.delete');
 
     // Dashboard Annonceur

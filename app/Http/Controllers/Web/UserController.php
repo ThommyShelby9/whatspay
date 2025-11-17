@@ -24,28 +24,28 @@ use Illuminate\Support\Facades\URL;
 class UserController extends Controller
 {
     use Utils;
-    
+
     protected $userService;
-    
+
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
     }
-    
+
     public function usersGet(Request $request, $group)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         // Vérifier si une action et un ID sont fournis dans la requête
         $action = $request->query('action');
         $id = $request->query('id');
-        
+
         // Si action et ID sont fournis, traiter l'action spécifique
         if ($action && $id) {
             return $this->handleUserAction($request, $action, $id, $group);
@@ -54,7 +54,7 @@ class UserController extends Controller
         if (!in_array($group, ["admin", "annonceur", "diffuseur", "all"])) {
             $alert["type"] = "danger";
             $alert["message"] = "Le lien recherché n'est pas valide";
-            return redirect(config('app.url').'/admin/dashboard')->with($alert);
+            return redirect(config('app.url') . '/admin/dashboard')->with($alert);
         }
 
         $pagetilte = "";
@@ -102,6 +102,7 @@ class UserController extends Controller
         // Récupérer les données pour les filtres
         $countries = Country::all();
         $viewData["countries"] = $countries;
+        $viewData["countriesList"] = $countries->toArray();
         $viewData["countriesJson"] = json_encode($countries);
 
         $viewData["bjId"] = '';
@@ -115,6 +116,7 @@ class UserController extends Controller
 
         $localities = Locality::where('type', 2)->orderBy('name', 'asc')->get();
         $viewData["localities"] = $localities;
+        $viewData["localitiesList"] = $localities->toArray();
         $viewData["localitiesJson"] = json_encode($localities);
 
         $viewData["categories"] = Category::all();
@@ -129,29 +131,29 @@ class UserController extends Controller
         $viewData["studiesJson"] = json_encode($viewData["studies"]);
 
         $this->setViewData($request, $viewData);
-        
+
         // Sélectionner le template selon le groupe
         $template = 'admin.' . ($group != 'all' ? $group : 'users');
-        
+
         return view($template, [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Admin', 
-            'pagetilte' => $pagetilte, 
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => $pagetilte,
             'pagecardtilte' => $pagecardtilte,
         ]);
     }
-    
+
     /**
      * Traite les actions spécifiques sur un utilisateur
      */
     private function handleUserAction(Request $request, $action, $id, $group)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         // Initialiser les filtres avec des valeurs par défaut
         $viewData["filtre_country"] = "all";
         $viewData["filtre_locality"] = "all";
@@ -162,26 +164,26 @@ class UserController extends Controller
         $viewData["filtre_category"] = [];
         $viewData["filtre_contenu"] = [];
         $viewData["filtre_lang"] = [];
-        
+
         // Récupérer l'utilisateur
         $user = $this->userService->getUserById($id);
-        
+
         if (!$user) {
             $alert['type'] = 'danger';
             $alert['message'] = 'Utilisateur non trouvé';
             return redirect()->route('admin.users', ['group' => $group])->with($alert);
         }
-        
+
         // Récupérer le profil de l'utilisateur
         $userRoles = DB::table('role_user')
             ->join('roles', 'role_user.role_id', '=', 'roles.id')
             ->where('role_user.user_id', $id)
             ->pluck('roles.typerole')
             ->toArray();
-            
+
         $viewData['userDetails'] = $user;
         $viewData['userRoles'] = $userRoles;
-        
+
         // Récupérer les données communes pour les formulaires
         $viewData["countries"] = Country::all();
         $viewData["localities"] = Locality::where('type', 2)->orderBy('name', 'asc')->get();
@@ -190,23 +192,23 @@ class UserController extends Controller
         $viewData["occupations"] = Occupation::all();
         $viewData["categories"] = Category::all();
         $viewData["contenttypes"] = Contenttype::all();
-        
+
         $this->setViewData($request, $viewData);
-        
+
         $pagetitle = '';
         $pagecardtitle = '';
-        
+
         switch ($action) {
             case 'view':
                 $pagetitle = 'Détails utilisateur';
                 $pagecardtitle = $user->firstname . ' ' . $user->lastname;
                 break;
-                
+
             case 'edit':
                 $pagetitle = 'Modifier utilisateur';
                 $pagecardtitle = 'Édition de ' . $user->firstname . ' ' . $user->lastname;
                 break;
-                
+
             case 'stats':
                 // Vérifier si l'utilisateur est un diffuseur
                 if (!in_array('DIFFUSEUR', $userRoles)) {
@@ -214,12 +216,12 @@ class UserController extends Controller
                     $alert['message'] = 'Les statistiques ne sont disponibles que pour les diffuseurs';
                     return redirect()->route('admin.users', ['group' => $group])->with($alert);
                 }
-                
+
                 $viewData['stats'] = $this->getDiffuseurStats($id);
                 $pagetitle = 'Statistiques diffuseur';
                 $pagecardtitle = 'Performances de ' . $user->firstname . ' ' . $user->lastname;
                 break;
-                
+
             case 'campaigns':
                 // Vérifier si l'utilisateur est un annonceur
                 if (!in_array('ANNONCEUR', $userRoles)) {
@@ -227,76 +229,75 @@ class UserController extends Controller
                     $alert['message'] = 'Les campagnes ne sont disponibles que pour les annonceurs';
                     return redirect()->route('admin.users', ['group' => $group])->with($alert);
                 }
-                
+
                 // Récupérer les campagnes de l'annonceur
                 $viewData['campaigns'] = Task::where('client_id', $id)
                     ->orderBy('created_at', 'desc')
                     ->paginate(10);
-                    
+
                 $pagetitle = 'Campagnes annonceur';
                 $pagecardtitle = 'Campagnes de ' . $user->firstname . ' ' . $user->lastname;
                 break;
-                
+
             default:
                 $alert['type'] = 'warning';
                 $alert['message'] = 'Action non reconnue';
                 return redirect()->route('admin.users', ['group' => $group])->with($alert);
         }
-        
+
         // Retourner la vue appropriée
         $template = 'admin.' . ($group != 'all' ? $group : 'users');
-        
+
         return view($template, [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | ' . $pagetitle, 
-            'pagetilte' => $pagetitle, 
+            'title' => 'WhatsPAY | ' . $pagetitle,
+            'pagetilte' => $pagetitle,
             'pagecardtilte' => $pagecardtitle,
         ]);
     }
-    
+
     /**
      * Traite les actions sur les utilisateurs (POST)
      */
     public function usersPost(Request $request, $group)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
-        if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
-        }
 
+        if (!$this->isConnected()) {
+            return redirect(config('app.url') . '/admin/login')->with($alert);
+        }
         // Traiter les requêtes AJAX
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->input('action') === 'toggle_status') {
             $action = $request->input('action');
-            
+
             if ($action === 'toggle_status') {
                 return $this->toggleUserStatus($request);
             }
-            
+
             return Response::json(['success' => false, 'message' => 'Action non reconnue']);
         }
 
         // Traiter les actions de formulaire
         $action = $request->input('action');
-        
+
         switch ($action) {
             case 'delete_user':
                 return $this->deleteUser($request, $group);
-                
+
             case 'update_user':
                 return $this->updateUser($request, $group);
-                
+
             default:
                 $alert['type'] = 'warning';
                 $alert['message'] = 'Action non reconnue';
                 return redirect()->route('admin.users', ['group' => $group])->with($alert);
         }
     }
-    
+
     /**
      * Active/désactive un utilisateur (AJAX)
      */
@@ -304,17 +305,17 @@ class UserController extends Controller
     {
         $userId = $request->input('user_id');
         $enabled = $request->input('enabled');
-        
+
         try {
             $result = $this->userService->updateUser($userId, ['enabled' => $enabled]);
-            
+
             if ($result['success']) {
                 return Response::json([
                     'success' => true,
                     'message' => 'Le statut a été modifié avec succès'
                 ]);
             }
-            
+
             return Response::json([
                 'success' => false,
                 'message' => $result['message']
@@ -326,57 +327,57 @@ class UserController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Supprime un utilisateur
      */
-/**
- * Supprime un utilisateur
- */
-private function deleteUser(Request $request, $group)
-{
-    $userId = $request->input('user_id');
-    
-    // Vérification que l'ID est bien présent
-    if (empty($userId)) {
-        $alert['type'] = 'danger';
-        $alert['message'] = 'ID utilisateur manquant';
+    /**
+     * Supprime un utilisateur
+     */
+    private function deleteUser(Request $request, $group)
+    {
+        $userId = $request->input('user_id');
+
+        // Vérification que l'ID est bien présent
+        if (empty($userId)) {
+            $alert['type'] = 'danger';
+            $alert['message'] = 'ID utilisateur manquant';
+            return redirect()->route('admin.users', ['group' => $group])->with($alert);
+        }
+
+        // Utiliser le service au lieu de dupliquer la logique
+        $result = $this->userService->deleteUser($userId);
+
+        $alert['type'] = $result['success'] ? 'success' : 'danger';
+        $alert['message'] = $result['message'];
+
         return redirect()->route('admin.users', ['group' => $group])->with($alert);
     }
-    
-    // Utiliser le service au lieu de dupliquer la logique
-    $result = $this->userService->deleteUser($userId);
-    
-    $alert['type'] = $result['success'] ? 'success' : 'danger';
-    $alert['message'] = $result['message'];
-    
-    return redirect()->route('admin.users', ['group' => $group])->with($alert);
-}
 
-public function deleteUserById(Request $request, $group, $userId)
-{
-    $alert = []; 
-    $this->setAlert($request, $alert);
-    
-    if (!$this->isConnected()) {
-        return redirect(config('app.url').'/admin/login')->with($alert);
+    public function deleteUserById(Request $request, $group, $userId)
+    {
+        $alert = [];
+        $this->setAlert($request, $alert);
+
+        if (!$this->isConnected()) {
+            return redirect(config('app.url') . '/admin/login')->with($alert);
+        }
+
+        $result = $this->userService->deleteUser($userId);
+
+        $alert['type'] = $result['success'] ? 'success' : 'danger';
+        $alert['message'] = $result['message'];
+
+        return redirect()->route('admin.users', ['group' => $group])->with($alert);
     }
-    
-    $result = $this->userService->deleteUser($userId);
-    
-    $alert['type'] = $result['success'] ? 'success' : 'danger';
-    $alert['message'] = $result['message'];
-    
-    return redirect()->route('admin.users', ['group' => $group])->with($alert);
-}
-    
+
     /**
      * Met à jour un utilisateur
      */
-    private function updateUser(Request $request, $group)
+    public function updateUser(Request $request, $group)
     {
         $userId = $request->input('user_id');
-        
+
         // Valider les données
         $request->validate([
             'firstname' => 'required|string|max:255',
@@ -385,7 +386,7 @@ public function deleteUserById(Request $request, $group, $userId)
             'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:6|confirmed'
         ]);
-        
+
         try {
             $userData = [
                 'firstname' => $request->input('firstname'),
@@ -395,27 +396,28 @@ public function deleteUserById(Request $request, $group, $userId)
                 'locality_id' => $request->input('locality_id'),
                 'enabled' => $request->has('enabled') ? 1 : 0
             ];
-            
+
+
             // Ajouter les champs spécifiques au diffuseur si présents
             if ($request->has('vuesmoyen')) {
                 $userData['vuesmoyen'] = $request->input('vuesmoyen');
             }
-            
+
             if ($request->has('lang_id')) {
                 $userData['lang_id'] = $request->input('lang_id');
             }
-            
+
             if ($request->has('study_id')) {
                 $userData['study_id'] = $request->input('study_id');
             }
-            
+
             // Mettre à jour le mot de passe si fourni
             if ($request->filled('password')) {
                 $userData['password'] = Hash::make($request->input('password'));
             }
-            
+
             $result = $this->userService->updateUser($userId, $userData);
-            
+
             if ($result['success']) {
                 $alert['type'] = 'success';
                 $alert['message'] = 'Utilisateur mis à jour avec succès';
@@ -427,10 +429,10 @@ public function deleteUserById(Request $request, $group, $userId)
             $alert['type'] = 'danger';
             $alert['message'] = 'Erreur lors de la mise à jour: ' . $e->getMessage();
         }
-        
+
         return redirect()->route('admin.users', ['group' => $group, 'action' => 'view', 'id' => $userId])->with($alert);
     }
-    
+
     /**
      * Récupère les statistiques d'un diffuseur
      */
@@ -438,53 +440,53 @@ public function deleteUserById(Request $request, $group, $userId)
     {
         // Total des campagnes
         $totalCampaigns = DB::table('assignments')
-            ->where('influencer_id', $userId)
+            ->where('assigner_id', $userId)
             ->count();
-            
+
         // Campagnes terminées
         $completedCampaigns = DB::table('assignments')
-            ->where('influencer_id', $userId)
+            ->where('assigner_id', $userId)
             ->where('status', 'COMPLETED')
             ->count();
-            
+
         // Campagnes en cours
         $activeCampaigns = DB::table('assignments')
-            ->where('influencer_id', $userId)
+            ->where('assigner_id', $userId)
             ->where('status', 'IN_PROGRESS')
             ->count();
-            
+
         // Revenus totaux
         $totalEarnings = DB::table('assignments')
-            ->where('influencer_id', $userId)
+            ->where('assigner_id', $userId)
             ->where('status', 'COMPLETED')
             ->sum('gain');
-            
+
         // Statistiques mensuelles
         $monthlyStats = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = now()->subMonths($i);
             $startOfMonth = $month->copy()->startOfMonth();
             $endOfMonth = $month->copy()->endOfMonth();
-            
+
             $monthlyCompletions = DB::table('assignments')
-                ->where('influencer_id', $userId)
+                ->where('assigner_id', $userId)
                 ->where('status', 'COMPLETED')
                 ->whereBetween('submission_date', [$startOfMonth, $endOfMonth])
                 ->count();
-                
+
             $monthlyEarnings = DB::table('assignments')
-                ->where('influencer_id', $userId)
+                ->where('assigner_id', $userId)
                 ->where('status', 'COMPLETED')
                 ->whereBetween('submission_date', [$startOfMonth, $endOfMonth])
                 ->sum('gain');
-                
+
             $monthlyStats[] = [
                 'month' => $month->format('M Y'),
                 'completions' => $monthlyCompletions,
                 'earnings' => $monthlyEarnings
             ];
         }
-        
+
         return [
             'totalCampaigns' => $totalCampaigns,
             'completedCampaigns' => $completedCampaigns,
@@ -493,7 +495,7 @@ public function deleteUserById(Request $request, $group, $userId)
             'monthlyStats' => $monthlyStats
         ];
     }
-    
+
     /**
      * Convertit les paramètres de requête en filtres pour le service utilisateur
      */
@@ -503,33 +505,36 @@ public function deleteUserById(Request $request, $group, $userId)
             'country_id' => $request->input('filtre_country') !== 'all' ? $request->input('filtre_country') : null,
             'locality_id' => $request->input('filtre_locality') !== 'all' ? $request->input('filtre_locality') : null,
             'profile' => $request->input('filtre_profile') !== 'all' ? $request->input('filtre_profile') : null,
-            'enabled' => $request->input('filtre_status') !== 'all' ? $request->input('filtre_status') : null,
+            'enabled' => $request->input('filtre_status') !== '' ? (int)$request->input('filtre_status') : null,
             'occupation_ids' => $request->input('filtre_occupation', []),
             'study_ids' => $request->input('filtre_study', []),
             'category_ids' => $request->input('filtre_category', []),
             'contenttype_ids' => $request->input('filtre_contenu', []),
             'lang_ids' => $request->input('filtre_lang', []),
+            'vues_min' => $request->input('filtre_vues_min') !== '' ? (int)$request->input('filtre_vues_min') : null,
+            'vues_max' => $request->input('filtre_vues_max') !== '' ? (int)$request->input('filtre_vues_max') : null,
         ];
     }
-    
-    
+
+
     public function profile(Request $request)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $userId = $request->session()->get('userid');
+        dd($userId);
         $user = $this->userService->getUserById($userId);
 
         if (!$user) {
             $alert["type"] = "danger";
             $alert["message"] = "Utilisateur non trouvé";
-            return redirect(config('app.url').'/admin/dashboard')->with($alert);
+            return redirect(config('app.url') . '/admin/dashboard')->with($alert);
         }
 
         $viewData["user"] = $user;
@@ -538,27 +543,27 @@ public function deleteUserById(Request $request, $group, $userId)
         $viewData["langs"] = Lang::all();
         $viewData["studies"] = Study::all();
         $viewData["occupations"] = Occupation::all();
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('admin.profile', [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Admin', 
-            'pagetilte' => 'Mon profil', 
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => 'Mon profil',
             'pagecardtilte' => 'Informations personnelles',
         ]);
     }
-    
+
     public function updateProfile(Request $request)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $request->validate([
@@ -569,7 +574,7 @@ public function deleteUserById(Request $request, $group, $userId)
         ]);
 
         $userId = $request->session()->get('userid');
-        
+
         $userData = [
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,
@@ -595,7 +600,7 @@ public function deleteUserById(Request $request, $group, $userId)
 
         return redirect()->route('admin.profile')->with($alert);
     }
-    
+
     private function isConnected()
     {
         return (\Auth::viaRemember() || \Auth::check());

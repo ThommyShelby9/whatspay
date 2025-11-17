@@ -11,12 +11,13 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class UserService
 {
     use Utils;
-    
+
     public function getUsers($filters = [])
     {
         // Démarrer avec une requête de base
@@ -31,42 +32,88 @@ class UserService
             ->leftJoin('langs', 'langs.id', '=', 'users.lang_id')
             ->leftJoin('occupations', 'occupations.id', '=', 'users.occupation_id')
             ->distinct();
-        
+
         // Appliquer les filtres
         if (!empty($filters['profile'])) {
             $query->where('roles.typerole', '=', $filters['profile']);
         }
-        
+
         if (!empty($filters['country_id'])) {
             $query->where('users.country_id', '=', $filters['country_id']);
         }
-        
+
         if (!empty($filters['locality_id'])) {
             $query->where('users.locality_id', '=', $filters['locality_id']);
         }
-        
+
         if (!empty($filters['category_id'])) {
             $query->where('category_user.category_id', '=', $filters['category_id']);
         }
-        
+
+        if (!empty($filters['enabled'])) {
+            $query->where('users.enabled', '=', $filters['enabled']);
+        }
+
+        // Occupations
+        if (!empty($filters['occupation_ids'])) {
+            $query->whereIn('users.occupation_id', $filters['occupation_ids']);
+        }
+
+        // Studies
+        if (!empty($filters['study_ids'])) {
+            $query->whereIn('users.study_id', $filters['study_ids']);
+        }
+
+        // Langues
+        if (!empty($filters['lang_ids'])) {
+            $query->whereIn('users.lang_id', $filters['lang_ids']);
+        }
+
+        // Catégories (pivot)
+        if (!empty($filters['category_ids'])) {
+            $query->whereIn('category_user.category_id', $filters['category_ids']);
+        }
+
+        // Types de contenu (pivot)
+        if (!empty($filters['contenttype_ids'])) {
+            $query->leftJoin('contenttype_user', 'contenttype_user.user_id', '=', 'users.id')
+                ->whereIn('contenttype_user.contenttype_id', $filters['contenttype_ids']);
+        }
+
+        if (!empty($filters['vues_min']) || !empty($filters['vues_max'])) {
+            // Si la colonne users.vuesmoyen existe, filtre simple
+            if (Schema::hasColumn('users', 'vuesmoyen')) {
+                if ($filters['vues_min'] !== null && $filters['vues_max'] !== null) {
+                    $query->whereBetween('users.vuesmoyen', [$filters['vues_min'], $filters['vues_max']]);
+                } elseif ($filters['vues_min'] !== null) {
+                    $query->where('users.vuesmoyen', '>=', $filters['vues_min']);
+                } elseif ($filters['vues_min'] !== null) {
+                    $query->where('users.vuesmoyen', '<=', $filters['vues_max']);
+                }
+            }
+        }
+
         // Récupérer les IDs des utilisateurs filtrés
         $userIds = $query->pluck('users.id')->toArray();
-        
+
         // Si aucun utilisateur ne correspond aux filtres, retourner un tableau vide
         if (empty($userIds)) {
             return [];
         }
-        
+
         // Récupérer toutes les données pour ces utilisateurs
         $users = DB::table('users')
             ->select([
                 'users.*',
+                'roles.typerole as profiles',
                 'studies.name as study',
                 'langs.name as lang',
                 'countries.name as country',
                 'localities.name as locality',
                 'occupations.name as profession',
             ])
+            ->leftJoin('role_user', 'role_user.user_id', '=', 'users.id')
+            ->leftJoin('roles', 'roles.id', '=', 'role_user.role_id')
             ->leftJoin('countries', 'countries.id', '=', 'users.country_id')
             ->leftJoin('localities', 'localities.id', '=', 'users.locality_id')
             ->leftJoin('studies', 'studies.id', '=', 'users.study_id')
@@ -75,7 +122,7 @@ class UserService
             ->whereIn('users.id', $userIds)
             ->orderByDesc('users.created_at')
             ->get();
-        
+
         // Ajouter les catégories et types de contenu agrégés
         $userList = [];
         foreach ($users as $user) {
@@ -88,30 +135,30 @@ class UserService
                     return Str::limit($name, 10);
                 })
                 ->implode(', ');
-            
+
             // Récupérer les types de contenu pour cet utilisateur
             $contentTypes = DB::table('contenttype_user')
                 ->join('contenttypes', 'contenttypes.id', '=', 'contenttype_user.contenttype_id')
                 ->where('contenttype_user.user_id', $user->id)
                 ->pluck('contenttypes.name')
                 ->implode(', ');
-            
+
             // Ajouter à l'objet utilisateur
             $user->category = $categories;
             $user->contenttype = $contentTypes;
-            
+
             $userList[] = $user;
         }
-        
+
         return $userList;
     }
-    
+
     public function getUsersByProfile($profile, $filters = [])
     {
         $filters['profile'] = $profile;
         return $this->getUsers($filters);
     }
-    
+
     /**
      * Récupère un utilisateur par son ID avec toutes ses relations
      * 
@@ -130,50 +177,50 @@ class UserService
             'contentTypes',
             'roles'
         ])->find($id);
-        
+
         if (!$user) {
             return null;
         }
-        
+
         // Convertir l'objet Eloquent en objet standard pour la vue
         $userData = (object) $user->toArray();
-        
+
         // Ajouter les propriétés calculées
         $userData->category = $user->categories->pluck('name')
             ->map(function ($name) {
                 return Str::limit($name, 10);
             })->implode(', ');
-            
+
         $userData->contenttype = $user->contentTypes->pluck('name')->implode(', ');
         $userData->profiles = $user->roles->pluck('typerole')->implode(', ');
-        
+
         // Ajout des noms des relations pour compatibilité avec l'ancienne méthode
         $userData->country = optional($user->country)->name;
         $userData->locality = optional($user->locality)->name;
         $userData->study = optional($user->study)->name;
         $userData->lang = optional($user->language)->name;
         $userData->profession = optional($user->occupation)->name;
-        
+
         return $userData;
     }
-    
+
     public function updateUser($id, $userData)
     {
         $result = [
             'success' => false,
             'message' => 'Une erreur est survenue lors de la mise à jour de l\'utilisateur'
         ];
-        
+
         try {
             $user = User::find($id);
-            
+
             if (!$user) {
                 $result['message'] = 'Utilisateur non trouvé';
                 return $result;
             }
-            
+
             $updateData = [];
-            
+
             // Mettre à jour uniquement les champs fournis
             if (!empty($userData['firstname'])) $updateData['firstname'] = $userData['firstname'];
             if (!empty($userData['lastname'])) $updateData['lastname'] = $userData['lastname'];
@@ -184,83 +231,79 @@ class UserService
             if (!empty($userData['occupation_id'])) $updateData['occupation_id'] = $userData['occupation_id'];
             if (!empty($userData['occupation'])) $updateData['occupation'] = $userData['occupation'];
             if (!empty($userData['phone'])) $updateData['phone'] = $userData['phone'];
+            if ($userData['enabled'] !== null) $updateData['enabled'] = $userData['enabled'];
             if (!empty($userData['vuesmoyen'])) $updateData['vuesmoyen'] = $userData['vuesmoyen'];
-            
+
             if (!empty($userData['password'])) {
                 $updateData['password'] = Hash::make($userData['password']);
             }
-            
+
             if (count($updateData) > 0) {
                 User::where('id', $id)->update($updateData);
             }
-            
+
             // Mise à jour des catégories et types de contenu si nécessaire
             $processingTransaction = false;
-            
+
             if (!empty($userData['categories']) || !empty($userData['contentTypes'])) {
                 DB::beginTransaction();
                 $processingTransaction = true;
-                
+
                 if (!empty($userData['categories'])) {
                     // Utilisation de sync au lieu de delete + insert
                     $user->categories()->sync($userData['categories']);
                 }
-                
+
                 if (!empty($userData['contentTypes'])) {
                     // Utilisation de sync au lieu de delete + insert
                     $user->contentTypes()->sync($userData['contentTypes']);
                 }
-                
+
                 DB::commit();
                 $processingTransaction = false;
             }
-            
+
             $result['success'] = true;
             $result['message'] = 'Utilisateur mis à jour avec succès';
-            
         } catch (\Exception $e) {
             if (isset($processingTransaction) && $processingTransaction) {
                 DB::rollBack();
             }
             $result['message'] = 'Erreur: ' . $e->getMessage();
         }
-        
+
         return $result;
     }
-    
-    public function toggleUserStatus($id)
+
+    public function toggleUserStatus($id, $enabled)
     {
         $result = [
             'success' => false,
             'message' => 'Une erreur est survenue lors du changement de statut',
             'new_status' => null
         ];
-        
+
         try {
             $user = User::find($id);
-            
+
             if (!$user) {
                 $result['message'] = 'Utilisateur non trouvé';
                 return $result;
             }
-            
-            $newStatus = !$user->enabled;
-            
-            User::where('id', $id)->update([
-                'enabled' => $newStatus
-            ]);
-            
+
+            $user->enabled = $enabled;
+            $user->save();
+
             $result['success'] = true;
             $result['message'] = 'Statut modifié avec succès';
-            $result['new_status'] = $newStatus;
-            
+            $result['new_status'] = $user->enabled;
         } catch (\Exception $e) {
             $result['message'] = 'Erreur: ' . $e->getMessage();
         }
-        
+
         return $result;
     }
-    
+
     public function getInfluencersByCategory($categoryId)
     {
         return User::select('users.*', 'countries.name as country', 'localities.name as locality')
@@ -268,9 +311,9 @@ class UserService
             ->leftJoin('localities', 'localities.id', '=', 'users.locality_id')
             ->join('role_user', 'role_user.user_id', '=', 'users.id')
             ->join('roles', 'roles.id', '=', 'role_user.role_id')
-            ->join('category_user', function($join) use ($categoryId) {
+            ->join('category_user', function ($join) use ($categoryId) {
                 $join->on('category_user.user_id', '=', 'users.id')
-                     ->where('category_user.category_id', '=', $categoryId);
+                    ->where('category_user.category_id', '=', $categoryId);
             })
             ->where('roles.typerole', '=', 'DIFFUSEUR')
             ->where('users.enabled', '=', true)
@@ -286,12 +329,12 @@ class UserService
                         return Str::limit($name, 10);
                     })
                     ->implode(', ');
-                
+
                 $user->categories = $categories;
                 return $user;
             });
     }
-    
+
     public function getUserStats()
     {
         // Requêtes Eloquent pour les statistiques des utilisateurs
@@ -301,34 +344,34 @@ class UserService
         $verifiedUsers = User::whereNotNull('email_verified_at')->count();
         $notVerifiedUsers = User::whereNull('email_verified_at')->count();
         $totalVuesmoyen = User::sum('vuesmoyen');
-        
+
         // Requêtes pour les utilisateurs par type
         $adminRole = Role::where('typerole', 'ADMIN')->first();
         $announcerRole = Role::where('typerole', 'ANNONCEUR')->first();
         $influencerRole = Role::where('typerole', 'DIFFUSEUR')->first();
-        
+
         $admins = 0;
         $announcers = 0;
         $influencers = 0;
-        
+
         if ($adminRole) {
             $admins = DB::table('role_user')
                 ->where('role_id', $adminRole->id)
                 ->count();
         }
-        
+
         if ($announcerRole) {
             $announcers = DB::table('role_user')
                 ->where('role_id', $announcerRole->id)
                 ->count();
         }
-        
+
         if ($influencerRole) {
             $influencers = DB::table('role_user')
                 ->where('role_id', $influencerRole->id)
                 ->count();
         }
-        
+
         return [
             'total' => $totalUsers,
             'active' => $activeUsers,
@@ -341,7 +384,7 @@ class UserService
             'total_vuesmoyen' => $totalVuesmoyen,
         ];
     }
-    
+
     public function getRecentUsers($limit = 5)
     {
         return User::select('users.*')
@@ -355,12 +398,12 @@ class UserService
                     ->where('role_user.user_id', $user->id)
                     ->pluck('roles.typerole')
                     ->implode(', ');
-                
+
                 $user->profiles = $profiles;
                 return $user;
             });
     }
-    
+
     /**
      * Récupère les diffuseurs recommandés pour un annonceur
      * 
@@ -379,7 +422,7 @@ class UserService
             return [];
         }
     }
-    
+
     /**
      * Récupère les diffuseurs les plus populaires avec Eloquent
      * 
@@ -389,23 +432,23 @@ class UserService
     public function getPopularAgentsWithEloquent($limit = 4)
     {
         $influencerRole = Role::where('typerole', 'DIFFUSEUR')->first();
-        
+
         if (!$influencerRole) {
             return [];
         }
-        
+
         return User::select(
-                'users.id', 
-                'users.firstname', 
-                'users.lastname', 
-                'users.email',
-                'users.phone', 
-                'users.vuesmoyen',
-                'users.enabled',
-                DB::raw('coalesce(AVG(assignments.vues), 0) as avg_vues'),
-                'countries.name as country', 
-                'localities.name as locality'
-            )
+            'users.id',
+            'users.firstname',
+            'users.lastname',
+            'users.email',
+            'users.phone',
+            'users.vuesmoyen',
+            'users.enabled',
+            DB::raw('coalesce(AVG(assignments.vues), 0) as avg_vues'),
+            'countries.name as country',
+            'localities.name as locality'
+        )
             ->join('role_user', 'role_user.user_id', '=', 'users.id')
             ->leftJoin('assignments', 'users.id', '=', 'assignments.agent_id')
             ->leftJoin('countries', 'users.country_id', '=', 'countries.id')
@@ -413,14 +456,14 @@ class UserService
             ->where('role_user.role_id', $influencerRole->id)
             ->where('users.enabled', true)
             ->groupBy(
-                'users.id', 
-                'users.firstname', 
-                'users.lastname', 
+                'users.id',
+                'users.firstname',
+                'users.lastname',
                 'users.email',
-                'users.phone', 
+                'users.phone',
                 'users.vuesmoyen',
                 'users.enabled',
-                'countries.name', 
+                'countries.name',
                 'localities.name'
             )
             ->orderByDesc(DB::raw('coalesce(AVG(assignments.vues), 0)'))
@@ -433,12 +476,12 @@ class UserService
                     ->where('category_user.user_id', $user->id)
                     ->pluck('categories.name')
                     ->implode(', ');
-                
+
                 $user->category = $categories;
                 return $user;
             });
     }
-    
+
     /**
      * Récupère les diffuseurs les plus populaires (méthode obsolète, utilisez getPopularAgentsWithEloquent)
      * 
@@ -449,7 +492,7 @@ class UserService
     {
         return $this->getPopularAgentsWithEloquent($limit);
     }
-    
+
     /**
      * Récupère les IDs des catégories d'un utilisateur
      * 
@@ -463,7 +506,7 @@ class UserService
             ->pluck('category_id')
             ->toArray();
     }
-    
+
     /**
      * Récupère les statistiques d'affectation pour un utilisateur
      * 
@@ -474,27 +517,27 @@ class UserService
     {
         // Total des affectations
         $totalCount = Assignment::where('agent_id', $userId)->count();
-        
+
         // Affectations terminées
         $completedCount = Assignment::where('agent_id', $userId)
             ->where('status', 'COMPLETED')
             ->count();
-        
+
         // Affectations en attente
         $pendingCount = Assignment::where('agent_id', $userId)
             ->where('status', 'PENDING')
             ->count();
-        
+
         // Total des vues
         $totalVues = Assignment::where('agent_id', $userId)
             ->where('status', 'COMPLETED')
             ->sum('vues');
-        
+
         // Total des gains
         $totalGain = Assignment::where('agent_id', $userId)
             ->where('status', 'COMPLETED')
             ->sum('gain');
-        
+
         return [
             'total_count' => $totalCount,
             'completed_count' => $completedCount,
@@ -503,42 +546,47 @@ class UserService
             'total_gain' => $totalGain ?? 0,
         ];
     }
-/**
- * Supprime un utilisateur par son ID
- * 
- * @param string $userId ID de l'utilisateur à supprimer
- * @return array Résultat de l'opération
- */
-public function deleteUser($userId)
-{
-    $result = [
-        'success' => false,
-        'message' => 'Une erreur est survenue lors de la suppression de l\'utilisateur'
-    ];
-    
-    try {
-        // Vérifier si l'utilisateur existe
-        $user = User::find($userId);
-        
-        if (!$user) {
-            $result['message'] = 'Utilisateur non trouvé';
-            return $result;
+    /**
+     * Supprime un utilisateur par son ID
+     * 
+     * @param string $userId ID de l'utilisateur à supprimer
+     * @return array Résultat de l'opération
+     */
+    public function deleteUser($userId)
+    {
+        $result = [
+            'success' => false,
+            'message' => 'Une erreur est survenue lors de la suppression de l\'utilisateur'
+        ];
+
+        try {
+            // Vérifier si l'utilisateur existe
+            $user = User::find($userId);
+
+            if (!$user) {
+                $result['message'] = 'Utilisateur non trouvé';
+                return $result;
+            }
+
+            if ($user->tasks()->exists()) {
+                $result['message'] = 'Impossible de supprimer cet utilisateur car il possède encore des tâches.';
+                return $result;
+            }
+
+            // Supprimer les relations
+            DB::table('role_user')->where('user_id', $userId)->delete();
+            DB::table('category_user')->where('user_id', $userId)->delete();
+            DB::table('contenttype_user')->where('user_id', $userId)->delete();
+
+            // Supprimer l'utilisateur
+            DB::table('users')->where('id', $userId)->delete();
+
+            $result['success'] = true;
+            $result['message'] = 'Utilisateur supprimé avec succès';
+        } catch (\Exception $e) {
+            $result['message'] = 'Erreur lors de la suppression: ' . $e->getMessage();
         }
-        
-        // Supprimer les relations
-        DB::table('role_user')->where('user_id', $userId)->delete();
-        DB::table('category_user')->where('user_id', $userId)->delete();
-        DB::table('contenttype_user')->where('user_id', $userId)->delete();
-        
-        // Supprimer l'utilisateur
-        DB::table('users')->where('id', $userId)->delete();
-        
-        $result['success'] = true;
-        $result['message'] = 'Utilisateur supprimé avec succès';
-    } catch (\Exception $e) {
-        $result['message'] = 'Erreur lors de la suppression: ' . $e->getMessage();
+
+        return $result;
     }
-    
-    return $result;
-}
 }

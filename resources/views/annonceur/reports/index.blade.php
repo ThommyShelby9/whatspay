@@ -249,6 +249,6 @@
     </div>
 
     <script>
-        window.GLOBAL_STATS = @json($viewData['globalStats'])
+        window.GLOBAL_STATS = @json($viewData['globalStats']);
     </script>
 @endsection

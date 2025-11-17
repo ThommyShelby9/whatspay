@@ -17,10 +17,13 @@
                                     </li>
                                     <li class="breadcrumb-item"><a
                                             href="{{ route('announcer.campaigns.index') }}">Campagnes</a></li>
-                                    <li class="breadcrumb-item active">{{ $viewData['campaign']->name ?? 'Détails' }}</li>
+                                    <li class="breadcrumb-item active">
+                                        {{ $viewData['campaign']->name ?? 'Détails' }}</li>
                                 </ol>
                             </nav>
-                            <h4 class="mt-2">{{ $viewData['campaign']->name ?? 'Détails de la campagne' }}</h4>
+                            <h4 class="mt-2">
+                                {{ $viewData['campaign']->name ?? 'Détails de la campagne' }}
+                            </h4>
                         </div>
                         <div class="col-auto">
                             <div class="d-flex">
@@ -76,7 +79,8 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="font-size-16 mt-0 mb-1">Vues Totales</h5>
-                                <h3 class="text-primary mb-0">{{ number_format($viewData['stats']['total_views'] ?? 0) }}
+                                <h3 class="text-primary mb-0">
+                                    {{ number_format($viewData['stats']['total_views'] ?? 0) }}
                                 </h3>
                             </div>
                         </div>
@@ -95,7 +99,8 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="font-size-16 mt-0 mb-1">Clics Uniques</h5>
-                                <h3 class="text-success mb-0">{{ number_format($viewData['stats']['unique_clicks'] ?? 0) }}
+                                <h3 class="text-success mb-0">
+                                    {{ number_format($viewData['stats']['unique_clicks'] ?? 0) }}
                                 </h3>
                             </div>
                         </div>
@@ -114,7 +119,8 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="font-size-16 mt-0 mb-1">Taux de clic</h5>
-                                <h3 class="text-info mb-0">{{ number_format($viewData['stats']['click_rate'] ?? 0, 2) }}%
+                                <h3 class="text-info mb-0">
+                                    {{ number_format($viewData['stats']['click_rate'] ?? 0, 2) }}%
                                 </h3>
                             </div>
                         </div>
@@ -133,7 +139,8 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="font-size-16 mt-0 mb-1">Budget</h5>
-                                <h3 class="text-warning mb-0">{{ number_format($viewData['campaign']->budget ?? 0) }} F
+                                <h3 class="text-warning mb-0">
+                                    {{ number_format($viewData['campaign']->budget ?? 0) }} F
                                 </h3>
                             </div>
                         </div>
@@ -212,7 +219,8 @@
                         <div class="media-details">
                             <h6 class="text-muted mb-2">Légende</h6>
                             <p class="p-3 bg-light rounded text-black">
-                                {{ $viewData['campaign']->legend ?? 'Aucune légende disponible' }}</p>
+                                {{ $viewData['campaign']->legend ?? 'Aucune légende disponible' }}
+                            </p>
 
                             @if (($viewData['campaign']->media_type ?? '') == 'image_link')
                                 <div class="mb-3">
@@ -286,6 +294,7 @@
                                             <h6 class="text-muted fw-normal mb-1">Période de diffusion</h6>
                                             <div class="d-flex align-items-center">
                                                 <i class="fa fa-calendar-alt text-primary me-2"></i>
+
                                                 <p class="mb-0 fw-medium">
                                                     {{ isset($viewData['campaign']->startdate) ? date('d/m/Y', strtotime($viewData['campaign']->startdate)) : 'N/A' }}
                                                     <i class="fa fa-arrow-right mx-2 text-muted"></i>
@@ -297,6 +306,7 @@
                                         <div class="mb-4">
                                             <h6 class="text-muted fw-normal mb-1">Catégories</h6>
                                             <div class="category-tags">
+
                                                 @forelse($viewData["categories"] ?? [] as $category)
                                                     <span class="category-tag" data-bs-toggle="tooltip"
                                                         title="{{ $category->name }}">
@@ -313,7 +323,8 @@
                                             <div class="d-flex align-items-center">
                                                 <i class="fa fa-map-marker-alt text-danger me-2"></i>
                                                 <p class="mb-0 fw-medium">
-                                                    {{ $viewData['locality']->name ?? 'Toutes les localités' }}</p>
+                                                    {{ $viewData['locality']->name ?? 'Toutes les localités' }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -323,6 +334,7 @@
                                             <h6 class="text-muted fw-normal mb-1">Date de création</h6>
                                             <div class="d-flex align-items-center">
                                                 <i class="fa fa-calendar-plus text-success me-2"></i>
+
                                                 <p class="mb-0 fw-medium">
                                                     {{ isset($viewData['campaign']->created_at) ? date('d/m/Y H:i', strtotime($viewData['campaign']->created_at)) : 'N/A' }}
                                                 </p>
@@ -334,7 +346,8 @@
                                             <div class="d-flex align-items-center">
                                                 <i class="fa fa-briefcase text-primary me-2"></i>
                                                 <p class="mb-0 fw-medium">
-                                                    {{ $viewData['occupation']->name ?? 'Toutes les professions' }}</p>
+                                                    {{ $viewData['occupation']->name ?? 'Toutes les professions' }}
+                                                </p>
                                             </div>
                                         </div>
 
@@ -342,7 +355,8 @@
                                             <h6 class="text-muted fw-normal mb-1">Diffuseurs actifs</h6>
                                             <div class="d-flex align-items-center">
                                                 <i class="fa fa-users text-info me-2"></i>
-                                                <p class="mb-0 fw-medium">{{ count($viewData['assignments'] ?? []) }}
+                                                <p class="mb-0 fw-medium">
+                                                    {{ count($viewData['assignments'] ?? []) }}
                                                     diffuseur(s)</p>
                                             </div>
                                         </div>
@@ -354,7 +368,7 @@
                                         <h6 class="text-muted fw-normal mb-2">Description</h6>
                                         <div class="p-3 bg-light rounded">
                                             <p class="mb-0 text-black">
-                                                {{ $viewData['campaign']->descriptipon ?? 'Aucune description disponible' }}
+                                                {{ 'Promotion sur nos tableaux' ?? ($viewData['campaign']->descriptipon ?? 'Aucune description disponible') }}
                                             </p>
                                         </div>
                                     </div>

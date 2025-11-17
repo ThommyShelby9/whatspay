@@ -188,12 +188,15 @@
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="col-form-label">Catégorie</label>
-                                        <select class="form-select z-0!" id="filtre_category" name="filtre_category">
+
+                                        <select class="form-select select2-multiple" id="filtre_category"
+                                            name="filtre_category[]" style="z-index: 0 !important;" multiple>
                                             <option value="">Toutes les catégories</option>
-                                            @foreach ($viewData['categories'] ?? [] as $category)
-                                                <option value="{{ $category->id }}"
-                                                    {{ isset($viewData['filtre_category']) && $viewData['filtre_category'] == $category->id ? 'selected' : '' }}>
-                                                    {{ $category->name }}
+
+                                            @foreach ($viewData['categories'] as $item)
+                                                <option value="{{ $item->id }}"
+                                                    {{ isset($viewData['filtre_category']) && $viewData['filtre_category'] == $item->id ? 'selected' : '' }}>
+                                                    {{ $item->name }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -234,24 +237,11 @@
                                 <h4>Liste des Campagnes</h4>
                                 <span>{{ count($viewData['tasks'] ?? []) }} Campagnes trouvées</span>
                             </div>
-                            <div>
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-outline-primary dropdown-toggle"
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fa fa-download me-1"></i> Exporter
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" id="exportCSV">CSV</a></li>
-                                        <li><a class="dropdown-item" href="#" id="exportExcel">Excel</a></li>
-                                        <li><a class="dropdown-item" href="#" id="exportPDF">PDF</a></li>
-                                    </ul>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-hover" id="tasks-datatable">
+                            <table class="display table table-striped" id="items_datatable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -421,7 +411,6 @@
                         <button type="submit" class="btn btn-danger">Supprimer</button>
                     </div>
                     @csrf
-                    @method('DELETE')
                 </form>
             </div>
         </div>
