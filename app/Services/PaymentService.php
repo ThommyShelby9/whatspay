@@ -67,11 +67,11 @@ class PaymentService
         
         try {
             // Validation
-            if ($amount < 1000) {
+            if ($amount < 1) {
                 Log::warning('Montant trop faible', ['amount' => $amount]);
                 return [
                     'success' => false,
-                    'message' => 'Le montant minimum de dépôt est de 1000 FCFA'
+                    'message' => 'Le montant minimum de dépôt est de 1 FCFA'
                 ];
             }
             
@@ -139,6 +139,29 @@ class PaymentService
             Log::info('Transaction créée en DB', ['id' => $paymentTransaction->id]);
             
             // ✅ Payload selon la documentation officielle PayPlus
+            // Récupérer les infos utilisateur pour un payload plus complet
+            $user = \App\Models\User::find($userId);
+
+            // Nettoyer et formater le numéro de téléphone pour PayPlus
+            // PayPlus accepte: +CCXXXXXXXXX (CC = country code)
+            $cleanPhone = preg_replace('/[^0-9+]/', '', $customerPhone);
+
+            // Si le numéro commence déjà par un indicatif pays (2-3 chiffres), le garder
+            // Sinon, ajouter l'indicatif par défaut (229 pour Bénin)
+            if (!str_starts_with($cleanPhone, '+')) {
+                // Vérifier si le numéro commence déjà par un indicatif pays valide (225, 229, 237, etc.)
+                if (!preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9])/', $cleanPhone)) {
+                    // Pas d'indicatif pays détecté, ajouter 229 par défaut
+                    $cleanPhone = '229' . $cleanPhone;
+                }
+                $cleanPhone = '+' . $cleanPhone;
+            }
+
+            Log::info('Numéro de téléphone formaté', [
+                'original' => $customerPhone,
+                'cleaned' => $cleanPhone
+            ]);
+
             $payload = [
                 'commande' => [
                     'invoice' => [
@@ -154,12 +177,14 @@ class PaymentService
                         'total_amount' => $amount,
                         'devise' => 'XOF',
                         'description' => 'Rechargement compte WhatsPAY',
-                        'customer' => $customerPhone,
-                        'customer_firstname' => '',
-                        'customer_lastname' => '',
-                        'customer_email' => '',
+                        'customer' => $cleanPhone,
+                        'customer_firstname' => $user->firstname ?? 'Client',
+                        'customer_lastname' => $user->lastname ?? 'WhatsPAY',
+                        'customer_email' => $user->email ?? 'client@whatspay.africa',
                         'external_id' => $externalId,
-                        'otp' => ''
+                        'otp' => '',
+                        // Spécifier les moyens de paiement disponibles
+                        'network' => ['MOOV_BENIN', 'MTN_BENIN', 'WAVE_SENEGAL', 'ORANGE_MONEY_CI', 'MTN_CI', 'MOOV_CI']
                     ],
                     'actions' => [
                         'cancel_url' => route('announcer.wallet') . '?status=cancelled',
@@ -176,6 +201,16 @@ class PaymentService
             ];
             
             Log::info('Payload PayPlus préparé (doc officielle)', $payload);
+
+            // Log détaillé pour debug
+            Log::info('🔍 DEBUG PAYPLUS - Payload détaillé', [
+                'customer_phone' => $cleanPhone,
+                'amount' => $amount,
+                'customer_email' => $user->email ?? 'client@whatspay.africa',
+                'external_id' => $externalId,
+                'callback_url' => $callbackUrl,
+                'return_url' => route('announcer.wallet') . '?status=success',
+            ]);
             
             // ✅ Endpoint selon la documentation officielle
             $endpoint = $useRedirect ? 
@@ -233,25 +268,41 @@ class PaymentService
                             
                             // ✅ Vérification selon la documentation : response_code = "00" = succès
                             if (isset($responseData['response_code']) && $responseData['response_code'] === '00') {
-                                
+
                                 // Update transaction with PayPlus response
                                 $paymentTransaction->update([
                                     'gateway_response' => json_encode($responseData)
                                 ]);
-                                
+
                                 Log::info('✅ Succès PayPlus', [
                                     'base_url' => $baseUrl,
                                     'response_code' => $responseData['response_code'],
                                     'token' => $responseData['token'] ?? 'N/A',
-                                    'redirect_url' => $responseData['response_text'] ?? 'N/A'
+                                    'redirect_url' => $responseData['response_text'] ?? 'N/A',
+                                    'full_response' => $responseData
                                 ]);
-                                
+
+                                // Log spécial pour identifier le problème des opérateurs
+                                Log::info('🔗 URL DE REDIRECTION PAYPLUS', [
+                                    'url' => $responseData['response_text'],
+                                    'message' => 'Copie cette URL et ouvre-la dans le navigateur pour voir ce que PayPlus affiche',
+                                    'token_payplus' => $responseData['token'] ?? 'N/A',
+                                ]);
+
+                                // Log pour debug: vérifier si tous les champs sont présents
+                                if (!isset($responseData['response_text']) || empty($responseData['response_text'])) {
+                                    Log::warning('⚠️ PayPlus response_text manquant ou vide', [
+                                        'response_data' => $responseData
+                                    ]);
+                                }
+
                                 return [
                                     'success' => true,
                                     'message' => 'Redirection vers la passerelle de paiement',
                                     'redirect_url' => $responseData['response_text'],
                                     'transaction_id' => $transactionId,
-                                    'token' => $responseData['token'] ?? null
+                                    'token' => $responseData['token'] ?? null,
+                                    'debug_response' => config('app.debug') ? $responseData : null
                                 ];
                                 
                             } else {
@@ -379,10 +430,10 @@ class PaymentService
                 ];
             }
             
-            if ($amount < 500) { // Minimum 500 XOF withdrawal
+            if ($amount < 1) { // Minimum 1 XOF withdrawal
                 return [
                     'success' => false,
-                    'message' => 'Le montant minimum de retrait est de 500 FCFA'
+                    'message' => 'Le montant minimum de retrait est de 1 FCFA'
                 ];
             }
             
