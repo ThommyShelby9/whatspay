@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         LocalityTableSeeder::class,
         CountryTableSeeder::class,
         TablesSeeder::class,
+        TestDataSeeder::class, // Données de test pour annonceurs, diffuseurs, campagnes et assignments
       ]);
     }
 }
