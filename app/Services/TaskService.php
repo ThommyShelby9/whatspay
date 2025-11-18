@@ -99,18 +99,22 @@ class TaskService
     {
         $query = Task::query();
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
         if (!empty($filters['client_id'])) {
             $query->where('client_id', $filters['client_id']);
         }
 
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
         if (!empty($filters['category_id'])) {
-            $query->whereHas('categories', function ($q) use ($filters) {
-                $q->where('categories.id', $filters['category_id']);
-            });
+            // Nettoyer le tableau : enlever les null / vides
+            $categoryIds = array_filter($filters['category_id'], fn($id) => !is_null($id) && $id !== '');
+            if (!empty($categoryIds)) {
+                $query->whereHas('categories', function ($q) use ($categoryIds) {
+                    $q->whereIn('categories.id', $categoryIds);
+                });
+            }
         }
 
         if (!empty($filters['start_date'])) {
@@ -143,6 +147,18 @@ class TaskService
 
             $taskId = $this->getId();
 
+            // Récupérer un id 'principal' si un tableau est passé
+            $primaryLocality = null;
+            if (!empty($taskData['localities'])) {
+                // si c'est un array, prends le premier élément
+                $primaryLocality = is_array($taskData['localities']) ? ($taskData['localities'][0] ?? null) : $taskData['localities'];
+            }
+
+            $primaryOccupation = null;
+            if (!empty($taskData['occupations'])) {
+                $primaryOccupation = is_array($taskData['occupations']) ? ($taskData['occupations'][0] ?? null) : $taskData['occupations'];
+            }
+
             // Préparer les données de base de la tâche
             $task = [
                 'id' => $taskId,
@@ -156,8 +172,8 @@ class TaskService
                 'budget' => $taskData['budget'],
                 'media_type' => $taskData['media_type'] ?? null,
                 'legend' => $taskData['legend'] ?? null,
-                'locality_id' => $taskData['locality_id'] ?? null,
-                'occupation_id' => $taskData['occupation_id'] ?? null,
+                'locality_id' => $primaryLocality,
+                'occupation_id' => $primaryOccupation,
             ];
 
             // Créer la tâche
@@ -207,67 +223,64 @@ class TaskService
      */
     public function updateTask($id, $taskData)
     {
-        $result = [
-            'success' => false,
-            'message' => 'Une erreur est survenue lors de la mise à jour de la tâche'
-        ];
+        $result = ['success' => false, 'message' => 'Erreur lors de la mise à jour', 'task_id' => $id];
 
         try {
-            $task = Task::find($id);
-
-            if (!$task) {
-                $result['message'] = 'Tâche non trouvée';
-                return $result;
-            }
-
             DB::beginTransaction();
 
-            // Mettre à jour les données de base
+            $task = Task::find($id);
+            if (!$task) return $result;
+
+            // Fichiers
+            $files = json_decode($task->files ?? '[]', true);
+            if (!is_array($files)) $files = [];
+
+            if (!empty($taskData['campaign_files'])) {
+                $files = [];
+                foreach ($taskData['campaign_files'] as $file) {
+                    $fileName = time() . '_' . $file->getClientOriginalName();
+                    $filePath = $file->storeAs('uploads', $fileName, 'public');
+                    $files[] = [
+                        'name' => $fileName,
+                        'original_name' => $file->getClientOriginalName(),
+                        'file_type' => $file->getMimeType(),
+                        'path' => $filePath,
+                        'url' => asset('storage/' . $filePath),
+                        'size' => $file->getSize(),
+                    ];
+                }
+            }
+
+            // Données à mettre à jour
             $updateData = [
                 'name' => $taskData['name'] ?? $task->name,
                 'descriptipon' => $taskData['descriptipon'] ?? $task->descriptipon,
-                'files' => $taskData['files'] ?? $task->files,
+                'files' => !empty($files) ? json_encode($files) : $task->files,
                 'startdate' => $taskData['startdate'] ?? $task->startdate,
                 'enddate' => $taskData['enddate'] ?? $task->enddate,
                 'budget' => $taskData['budget'] ?? $task->budget,
+                'media_type' => $taskData['media_type'] ?? $task->media_type,
+                'legend' => $taskData['legend'] ?? $task->legend,
             ];
 
-            // Champs optionnels
-            if (Schema::hasColumn('tasks', 'media_type')) {
-                $updateData['media_type'] = $taskData['media_type'] ?? $task->media_type;
-            }
-
+            // URL tracking
             if (!empty($taskData['url'])) {
-                // Générer un nouveau lien de tracking si l'URL a changé
                 $tracking = $this->trackingService->generateTrackingLink($taskData['url'], $id);
                 $updateData['url'] = $tracking['tracking_url'];
-            } else if (Schema::hasColumn('tasks', 'url')) {
+            } else {
                 $updateData['url'] = $taskData['url'] ?? $task->url;
-            }
-
-            if (Schema::hasColumn('tasks', 'legend')) {
-                $updateData['legend'] = $taskData['legend'] ?? $task->legend;
             }
 
             $task->update($updateData);
 
-            // Mettre à jour les relations
-            if (isset($taskData['categories'])) {
-                $task->categories()->sync($taskData['categories']);
-            }
-
-            if (isset($taskData['localities'])) {
-                $task->localities()->sync($taskData['localities']);
-            }
-
-            if (isset($taskData['occupations'])) {
-                $task->occupations()->sync($taskData['occupations']);
-            }
+            // Relations
+            $task->categories()->sync($taskData['categories'] ?? []);
+            $task->localities()->sync($taskData['localities'] ?? []);
+            $task->occupations()->sync($taskData['occupations'] ?? []);
 
             DB::commit();
-
             $result['success'] = true;
-            $result['message'] = 'Tâche mise à jour avec succès';
+            $result['message'] = 'Campagne mise à jour avec succès';
         } catch (\Exception $e) {
             DB::rollBack();
             $result['message'] = 'Erreur: ' . $e->getMessage();

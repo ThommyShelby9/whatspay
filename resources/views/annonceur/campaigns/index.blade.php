@@ -93,11 +93,13 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <button type="submit" class="btn btn-primary w-100 mt-2">
-                                            <i class="fa fa-search me-2"></i>Filtrer
-                                        </button>
-                                    </div>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-center mt-2">
+                                    {{-- <button type="reset" id="resetFilters"
+                                        class="btn btn-light me-2">Réinitialiser</button> --}}
+                                    <button type="submit" class="btn btn-primary w-100 d-flex">
+                                        <i class="fa fa-search me-2"></i>Filtrer
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -112,21 +114,10 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Vos campagnes</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fa fa-download me-1"></i>Exporter
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" id="exportCSV">CSV</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportExcel">Excel</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportPDF">PDF</a></li>
-                            </ul>
-                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover" id="campaigns-table">
+                            <table class="display table table-striped" id="items_datatable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -385,6 +376,16 @@
                 $('#exportCSV, #exportExcel, #exportPDF').on('click', function(e) {
                     e.preventDefault();
                     alert('Fonctionnalité d\'export à implémenter');
+                });
+
+                const form = this.closest('form');
+                // Réinitialiser tous les champs
+                form.querySelectorAll('input, select').forEach(field => {
+                    if (field.tagName === 'SELECT') {
+                        field.selectedIndex = 0; // première option
+                    } else {
+                        field.value = '';
+                    }
                 });
             });
         </script>

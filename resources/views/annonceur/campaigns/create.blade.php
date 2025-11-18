@@ -112,7 +112,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label class="form-label">Localité cible <span class="text-danger">*</span></label>
-                                        <select class="form-select select2" name="locality_id" required>
+                                        <select class="form-select select2" name="localities[]" multiple required>
                                             <option value="">Sélectionnez une localité...</option>
                                             @foreach ($viewData['localities'] ?? [] as $locality)
                                                 <option value="{{ $locality->id }}">{{ $locality->name }}</option>
@@ -125,7 +125,7 @@
                                     <div class="form-group mb-3">
                                         <label class="form-label">Profession cible <span
                                                 class="text-danger">*</span></label>
-                                        <select class="form-select select2" name="occupation_id" required>
+                                        <select class="form-select select2" name="occupations[]" multiple required>
                                             <option value="">Sélectionnez une profession...</option>
                                             @foreach ($viewData['occupations'] ?? [] as $occupation)
                                                 <option value="{{ $occupation->id }}">{{ $occupation->name }}</option>
@@ -455,7 +455,7 @@
                                     e.preventDefault();
                                     alert(
                                         'Pour le type de média "image", seuls les fichiers image sont autorisés.'
-                                        );
+                                    );
                                     return false;
                                 }
                             }
@@ -465,7 +465,7 @@
                                     e.preventDefault();
                                     alert(
                                         'Pour le type de média "vidéo", seuls les fichiers vidéo sont autorisés.'
-                                        );
+                                    );
                                     return false;
                                 }
                             }
@@ -497,11 +497,11 @@
                             message: 'Veuillez sélectionner une date de fin.'
                         },
                         {
-                            name: 'locality_id',
+                            name: 'localities[]',
                             message: 'Veuillez sélectionner une localité cible.'
                         },
                         {
-                            name: 'occupation_id',
+                            name: 'occupations[]',
                             message: 'Veuillez sélectionner une profession cible.'
                         },
                         {

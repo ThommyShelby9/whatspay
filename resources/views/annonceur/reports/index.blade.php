@@ -200,7 +200,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover" id="campaigns-stats-table">
+                            <table class="display table table-hover" id="items_datatable">
                                 <thead>
                                     <tr>
                                         <th>Campagne</th>

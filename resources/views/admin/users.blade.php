@@ -582,33 +582,33 @@
                 <div class="card-body">
                     <div class="row mb-4">
                         <div class="col-md-3">
-                            <div class="card bg-primary text-white">
+                            <div class="card bg-primary ">
                                 <div class="card-body">
-                                    <h5 class="card-title text-white">Campagnes totales</h5>
+                                    <h5 class="card-title text-black">Campagnes totales</h5>
                                     <h2 class="mt-3 mb-0">{{ $viewData['stats']['totalCampaigns'] }}</h2>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="card bg-success text-white">
+                            <div class="card bg-success ">
                                 <div class="card-body">
-                                    <h5 class="card-title text-white">Campagnes terminées</h5>
+                                    <h5 class="card-title text-black">Campagnes terminées</h5>
                                     <h2 class="mt-3 mb-0">{{ $viewData['stats']['completedCampaigns'] }}</h2>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="card bg-warning text-white">
+                            <div class="card bg-warning ">
                                 <div class="card-body">
-                                    <h5 class="card-title text-white">Campagnes actives</h5>
+                                    <h5 class="card-title text-black">Campagnes actives</h5>
                                     <h2 class="mt-3 mb-0">{{ $viewData['stats']['activeCampaigns'] }}</h2>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="card bg-info text-white">
+                            <div class="card bg-info ">
                                 <div class="card-body">
-                                    <h5 class="card-title text-white">Revenus totaux</h5>
+                                    <h5 class="card-title text-black">Revenus totaux</h5>
                                     <h2 class="mt-3 mb-0">
                                         {{ number_format($viewData['stats']['totalEarnings'], 0, ',', ' ') }} FCFA</h2>
                                 </div>

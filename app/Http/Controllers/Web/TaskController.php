@@ -52,7 +52,7 @@ class TaskController extends Controller
         $filters = [
             'status' => $request->input('filtre_status'),
             'client_id' => $request->input('filtre_client'),
-            'category_id' => $request->input('filtre_category'),
+            'category_id' => $request->input('filtre_category', []), // peut être un tableau
             'start_date' => $request->input('filtre_start_date'),
             'end_date' => $request->input('filtre_end_date'),
         ];

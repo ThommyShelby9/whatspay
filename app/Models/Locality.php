@@ -20,5 +20,4 @@ class Locality extends Model
         'locality_id',
         'country_id',
     ];
-
 }

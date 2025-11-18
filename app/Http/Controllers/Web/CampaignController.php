@@ -48,23 +48,23 @@ class CampaignController extends Controller
 
         $userId = $request->session()->get('userid');
 
-        // Get filters
+        // Récupérer les filtres depuis la requête
         $filters = [
             'status' => $request->get('filtre_status'),
             'category_id' => $request->get('filtre_category'),
             'start_date' => $request->get('filtre_start_date'),
-            'end_date' => $request->get('filtre_end_date')
+            'end_date' => $request->get('filtre_end_date'),
+            'client_id' => $userId, // obligatoire pour récupérer seulement ses campagnes
         ];
 
-        // Get campaigns
-        $viewData["campaigns"] = $this->taskService->getClientTasks($userId);
+        // Récupérer les campagnes filtrées
+        $viewData["campaigns"] = $this->taskService->getTasks($filters);
+
+        // Catégories pour le filtre
         $viewData["categories"] = $this->categoryService->getAllCategories();
 
-        // Get assignment counts per campaign
-        $taskIds = [];
-        foreach ($viewData["campaigns"] as $campaign) {
-            $taskIds[] = $campaign->id;
-        }
+        // Comptage des affectations pour chaque campagne
+        $taskIds = $viewData["campaigns"]->pluck('id')->toArray();
 
         $assignmentCounts = [];
         if (!empty($taskIds)) {
@@ -107,17 +107,10 @@ class CampaignController extends Controller
                 ->with('message', 'Campagne non trouvée ou non autorisée');
         }
 
-        // Convertir l'objet en tableau puis en objet pour assurer que toutes les propriétés soient accessibles
-        // Cela résout le problème des propriétés manquantes ou des différences de casse
-        $campaignArray = $campaign->toArray();
-
         // S'assurer que media_type existe
-        if (!isset($campaignArray['media_type'])) {
-            $campaignArray['media_type'] = null;
+        if (!isset($campaign->media_type)) {
+            $campaign->media_type = null;
         }
-
-        // Reconvertir en objet pour la vue
-        $campaign = (object)$campaignArray;
 
         // Informations de base
         $viewData["campaign"] = $campaign;
@@ -154,23 +147,25 @@ class CampaignController extends Controller
             }
 
             $viewData["mediaFiles"] = $mediaFiles;
+            //dd($mediaFiles);
         } catch (\Exception $e) {
             // En cas d'erreur, initialiser avec un tableau vide
             $viewData["mediaFiles"] = [];
         }
 
-        // Récupérer les informations de localité et profession
-        if (!empty($campaign->locality_id)) {
-            $viewData["locality"] = Locality::find($campaign->locality_id);
-        } else {
-            $viewData["locality"] = null;
+        // Récupération des localités
+        $localities = $campaign->localities ?? collect();
+        if ($localities->isEmpty() && !empty($campaign->locality_id)) {
+            $localities = collect([Locality::find($campaign->locality_id)]);
         }
+        $viewData["localities"] = $localities;
 
-        if (!empty($campaign->occupation_id)) {
-            $viewData["occupation"] = Occupation::find($campaign->occupation_id);
-        } else {
-            $viewData["occupation"] = null;
+        // Récupération des occupations
+        $occupations = $campaign->occupations ?? collect();
+        if ($occupations->isEmpty() && !empty($campaign->occupation_id)) {
+            $occupations = collect([Occupation::find($campaign->occupation_id)]);
         }
+        $viewData["occupations"] = $occupations;
 
         // S'assurer que les statistiques par appareil existent
         if (!isset($viewData["stats"]["devices"]) || !is_array($viewData["stats"]["devices"])) {
@@ -190,8 +185,6 @@ class CampaignController extends Controller
         $viewData["stats"]["avg_time"] = $viewData["stats"]["avg_time"] ?? 0;
         $viewData["stats"]["engagement_rate"] = $viewData["stats"]["engagement_rate"] ?? 0;
         $viewData["stats"]["geography"] = $viewData["stats"]["geography"] ?? [];
-
-        //dd($viewData['stats']);
 
         $this->setViewData($request, $viewData);
 
@@ -236,28 +229,51 @@ class CampaignController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'descriptipon' => 'nullable|string',
-            'files' => 'nullable',
+
+            'media_type' => 'required|in:image,image_link,text,video',
+            'url' => 'nullable|url',
+
+            'campaign_files' => 'nullable',
+            'campaign_files.*' => 'file|mimes:jpg,jpeg,png,mp4,mov,avi|max:20480',
+
             'startdate' => 'required|date',
             'enddate' => 'required|date|after_or_equal:startdate',
+
             'budget' => 'required|numeric|min:1000',
+
+            'localities' => 'required|array',
+            'localities.*' => 'exists:localities,id',
+
+            'occupations' => 'required|array',
+            'occupations.*' => 'exists:occupations,id',
+
             'categories' => 'nullable|array',
-            'media_type' => 'required|string',
-            'url' => 'nullable|url',
-            'locality_id' => 'required|string',
-            'occupation_id' => 'required|string',
+            'categories.*' => 'exists:categories,id',
+
             'legend' => 'required|string',
         ]);
 
+        // Validation conditionnelle
+        if (in_array($request->media_type, ['image', 'video'])) {
+            $request->validate([
+                'campaign_files' => 'required',
+            ]);
+        }
+
+        if ($request->media_type === 'image_link') {
+            $request->validate([
+                'url' => 'required|url',
+            ]);
+        }
+
+
         // Traitement des fichiers uploadés
         $files = [];
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
+        if ($request->hasFile('campaign_files')) {
+            foreach ($request->file('campaign_files') as $file) {
                 $fileName = time() . '_' . $file->getClientOriginalName();
                 $filePath = $file->storeAs('uploads', $fileName, 'public');
-                $files[] = [
-                    'name' => $fileName,
-                    'path' => $filePath
-                ];
+                $files[] = ['name' => $fileName, 'path' => $filePath];
             }
         }
 
@@ -273,8 +289,8 @@ class CampaignController extends Controller
             // Nouveaux champs
             'media_type' => $request->input('media_type'),
             'url' => $request->input('url'),
-            'locality_id' => $request->input('locality_id'),
-            'occupation_id' => $request->input('occupation_id'),
+            'localities' => $request->input('localities'),
+            'occupations' => $request->input('occupations'),
             'legend' => $request->input('legend'),
         ];
 
@@ -299,64 +315,34 @@ class CampaignController extends Controller
 
         $userId = $request->session()->get('userid');
 
-        // Get campaign details
         $campaign = $this->taskService->getTaskById($id);
+
         if (!$campaign || $campaign->client_id != $userId) {
             return redirect()->route('announcer.campaigns.index')
                 ->with('type', 'danger')
                 ->with('message', 'Campagne non trouvée ou non autorisée');
         }
 
-        // Convertir l'objet en tableau pour assurer l'accès à toutes les propriétés
-        $campaignArray = $campaign->toArray();
+        // Ajouter des valeurs par défaut si nécessaire
+        $campaign->media_type = $campaign->media_type ?? null;
+        $campaign->legend = $campaign->legend ?? null;
+        $campaign->url = $campaign->url ?? null;
 
-        // Assurer que toutes les propriétés nécessaires existent
-        $requiredProps = [
-            'media_type' => null,
-            'locality_id' => null,
-            'occupation_id' => null,
-            'legend' => null,
-            'url' => null,
-            'text' => null
-        ];
-
-        foreach ($requiredProps as $prop => $defaultValue) {
-            if (!isset($campaignArray[$prop])) {
-                $campaignArray[$prop] = $defaultValue;
-            }
-        }
-
-        // Reconvertir en objet pour la vue
-        $campaign = (object)$campaignArray;
-
-        // Récupérer les médias de la campagne
+        // Récupérer les médias
         $mediaFiles = json_decode($campaign->files ?? '[]', true);
-        if (!is_array($mediaFiles)) {
-            $mediaFiles = [];
-        }
-
-        // Ajouter les URLs complètes pour chaque média si nécessaire
+        if (!is_array($mediaFiles)) $mediaFiles = [];
         foreach ($mediaFiles as &$media) {
             if (isset($media['name']) && !isset($media['url'])) {
                 $media['url'] = asset('storage/uploads/' . $media['name']);
             }
         }
 
-        $viewData["campaign"] = $campaign;
-        $viewData["categories"] = $this->categoryService->getAllCategories();
-        $viewData["campaignCategories"] = $this->categoryService->getCategoriesByTask($id);
-        $viewData["mediaFiles"] = $mediaFiles;
-
-        // Charger les localités et professions
-        $viewData["localities"] = \App\Models\Locality::where('active', true)->orderBy('name')->get();
-        $viewData["occupations"] = \App\Models\Occupation::where('enabled', true)->orderBy('name')->get();
-
-        // DEBUG: ajouter ces informations à la vue pour faciliter le débogage
-        $viewData["debug_info"] = [
-            'campaign_array' => $campaignArray,
-            'has_locality_id' => isset($campaign->locality_id),
-            'has_occupation_id' => isset($campaign->occupation_id)
-        ];
+        $viewData['campaign'] = $campaign;
+        $viewData['mediaFiles'] = $mediaFiles;
+        $viewData['categories'] = $this->categoryService->getAllCategories();
+        $viewData['campaignCategories'] = $this->categoryService->getCategoriesByTask($id);
+        $viewData['localities'] = \App\Models\Locality::where('active', true)->orderBy('name')->get();
+        $viewData['occupations'] = \App\Models\Occupation::where('enabled', true)->orderBy('name')->get();
 
         $this->setViewData($request, $viewData);
 
@@ -373,55 +359,46 @@ class CampaignController extends Controller
     public function update(Request $request, $id)
     {
         $userId = $request->session()->get('userid');
-
-        // Get campaign details
         $campaign = $this->taskService->getTaskById($id);
+
         if (!$campaign || $campaign->client_id != $userId) {
             return redirect()->route('announcer.campaigns.index')
                 ->with('type', 'danger')
                 ->with('message', 'Campagne non trouvée ou non autorisée');
         }
 
-        // Traitement des fichiers uploadés
-        $mediaFiles = json_decode($campaign->files ?? '[]', true);
-        if (!is_array($mediaFiles)) {
-            $mediaFiles = [];
-        }
+        // Validation
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'descriptipon' => 'nullable|string',
+            'media_type' => 'required|in:image,image_link,text,video',
+            'url' => 'nullable|url',
+            'campaign_files.*' => 'file|mimes:jpg,jpeg,png,mp4,mov,avi|max:20480',
+            'startdate' => 'required|date',
+            'enddate' => 'required|date|after_or_equal:startdate',
+            'budget' => 'required|numeric|min:1000',
+            'categories' => 'nullable|array',
+            'categories.*' => 'exists:categories,id',
+            'localities' => 'nullable|array',
+            'localities.*' => 'exists:localities,id',
+            'occupations' => 'nullable|array',
+            'occupations.*' => 'exists:occupations,id',
+            'legend' => 'required|string',
+        ]);
 
-        if ($request->hasFile('campaign_files')) {
-            // Remplacer les anciens fichiers par les nouveaux
-            $mediaFiles = [];
-
-            foreach ($request->file('campaign_files') as $file) {
-                $fileName = time() . '_' . $file->getClientOriginalName();
-                $filePath = $file->storeAs('uploads', $fileName, 'public');
-
-                $mediaFiles[] = [
-                    'name' => $fileName,
-                    'original_name' => $file->getClientOriginalName(),
-                    'file_type' => $file->getMimeType(),
-                    'path' => $filePath,
-                    'url' => asset('storage/' . $filePath),
-                    'size' => $file->getSize()
-                ];
-            }
-        }
-
-        // Construction des données pour la mise à jour
         $taskData = [
             'name' => $request->input('name'),
             'descriptipon' => $request->input('descriptipon'),
-            'files' => json_encode($mediaFiles),
+            'media_type' => $request->input('media_type'),
+            'url' => $request->input('url'),
             'startdate' => $request->input('startdate'),
             'enddate' => $request->input('enddate'),
             'budget' => $request->input('budget'),
-            'categories' => $request->input('categories'),
-            // Nouveaux champs
-            'media_type' => $request->input('media_type'),
-            'url' => $request->input('url'),
-            'locality_id' => $request->input('locality_id'),
-            'occupation_id' => $request->input('occupation_id'),
-            'legend' => $request->input('legend')
+            'categories' => $request->input('categories') ?? [],
+            'localities' => $request->input('localities') ?? [],
+            'occupations' => $request->input('occupations') ?? [],
+            'legend' => $request->input('legend'),
+            'campaign_files' => $request->file('campaign_files'),
         ];
 
         $result = $this->taskService->updateTask($id, $taskData);

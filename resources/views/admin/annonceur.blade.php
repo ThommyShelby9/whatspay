@@ -226,19 +226,17 @@
                                                             class="fa fa-edit me-2"></i>Modifier
                                                     </a>
                                                 </li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('admin.users', ['group' => 'all', 'action' => 'campaigns', 'id' => $item->id]) }}"><i
-                                                            class="fa fa-certificate me-2"></i>Campagnes
-                                                    </a>
-                                                </li>
                                                 @if (strpos($item->profiles ?? '', 'DIFFUSEUR') !== false)
                                                     <li><a class="dropdown-item" href="#"><i
                                                                 class="fa fa-chart-line me-2"></i>Statistiques
                                                         </a></li>
                                                 @endif
                                                 @if (strpos($item->profiles ?? '', 'ANNONCEUR') !== false)
-                                                    <li><a class="dropdown-item" href="#"><i
-                                                                class="fa fa-tasks me-2"></i>Campagnes</a></li>
+                                                    <li><a class="dropdown-item"
+                                                            href="{{ route('admin.users', ['group' => 'all', 'action' => 'campaigns', 'id' => $item->id]) }}"><i
+                                                                class="fa fa-tasks me-2"></i>Campagnes
+                                                        </a>
+                                                    </li>
                                                 @endif
                                                 <li>
                                                     <hr class="dropdown-divider">

@@ -190,7 +190,7 @@
                                         <label class="col-form-label">Catégorie</label>
 
                                         <select class="form-select select2-multiple" id="filtre_category"
-                                            name="filtre_category[]" style="z-index: 0 !important;" multiple>
+                                            name="filtre_category[]" style="z-index: 0 !important;">
                                             <option value="">Toutes les catégories</option>
 
                                             @foreach ($viewData['categories'] as $item)

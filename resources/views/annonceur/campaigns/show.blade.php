@@ -319,12 +319,20 @@
                                         </div>
 
                                         <div class="mb-4">
-                                            <h6 class="text-muted fw-normal mb-1">Localité cible</h6>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fa fa-map-marker-alt text-danger me-2"></i>
-                                                <p class="mb-0 fw-medium">
-                                                    {{ $viewData['locality']->name ?? 'Toutes les localités' }}
-                                                </p>
+                                            <h6 class="text-muted fw-normal mb-1">Localité cible <i
+                                                    class="fa fa-map-marker text-danger me-2"></i></h6>
+                                            <div class=" align-items-start">
+                                                @if ($viewData['localities']->isNotEmpty())
+                                                    @foreach ($viewData['localities'] as $locality)
+                                                        <span class="mb-0 fw-medium d-block">
+                                                            {{ $locality->name }}
+                                                        </span>
+                                                    @endforeach
+                                                @else
+                                                    <span class="mb-0 fw-medium d-block">
+                                                        Toutes les localités
+                                                    </span>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -333,8 +341,7 @@
                                         <div class="mb-4">
                                             <h6 class="text-muted fw-normal mb-1">Date de création</h6>
                                             <div class="d-flex align-items-center">
-                                                <i class="fa fa-calendar-plus text-success me-2"></i>
-
+                                                <i class="fa fa-calendar text-success me-2"></i>
                                                 <p class="mb-0 fw-medium">
                                                     {{ isset($viewData['campaign']->created_at) ? date('d/m/Y H:i', strtotime($viewData['campaign']->created_at)) : 'N/A' }}
                                                 </p>
@@ -342,12 +349,21 @@
                                         </div>
 
                                         <div class="mb-4">
-                                            <h6 class="text-muted fw-normal mb-1">Profession cible</h6>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fa fa-briefcase text-primary me-2"></i>
-                                                <p class="mb-0 fw-medium">
-                                                    {{ $viewData['occupation']->name ?? 'Toutes les professions' }}
-                                                </p>
+                                            <h6 class="text-muted fw-normal mb-1">Profession cible <i
+                                                    class="fa fa-briefcase text-primary me-2"></i></h6>
+                                            <div class=" align-items-center">
+
+                                                @if ($viewData['occupations']->isNotEmpty())
+                                                    @foreach ($viewData['occupations'] as $occupation)
+                                                        <p class="mb-0 fw-medium">
+                                                            {{ $occupation->name }}
+                                                        </p>
+                                                    @endforeach
+                                                @else
+                                                    <p class="mb-0 fw-medium">
+                                                        Aucune profession
+                                                    </p>
+                                                @endif
                                             </div>
                                         </div>
 
@@ -368,7 +384,7 @@
                                         <h6 class="text-muted fw-normal mb-2">Description</h6>
                                         <div class="p-3 bg-light rounded">
                                             <p class="mb-0 text-black">
-                                                {{ 'Promotion sur nos tableaux' ?? ($viewData['campaign']->descriptipon ?? 'Aucune description disponible') }}
+                                                {{ $viewData['campaign']->descriptipon ?? 'Aucune description disponible' }}
                                             </p>
                                         </div>
                                     </div>
