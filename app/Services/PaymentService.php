@@ -182,7 +182,9 @@ class PaymentService
                         'customer_lastname' => $user->lastname ?? 'WhatsPAY',
                         'customer_email' => $user->email ?? 'client@whatspay.africa',
                         'external_id' => $externalId,
-                        'otp' => ''
+                        'otp' => '',
+                        // Spécifier les moyens de paiement disponibles
+                        'network' => ['MOOV_BENIN', 'MTN_BENIN', 'WAVE_SENEGAL', 'ORANGE_MONEY_CI', 'MTN_CI', 'MOOV_CI']
                     ],
                     'actions' => [
                         'cancel_url' => route('announcer.wallet') . '?status=cancelled',
