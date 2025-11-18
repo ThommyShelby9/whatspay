@@ -120,23 +120,20 @@ class WalletController extends Controller
             // Validation des données
             $request->validate([
                 'payment_method' => 'required|string',
-                'amount' => 'required|numeric|min:1000|max:1000000',
-                'phone' => 'required|string|regex:/^[0-9]{8,15}$/',
+                'amount' => 'required|numeric|min:1|max:1000000',
+                'phone' => 'required|string|regex:/^[0-9+]{8,15}$/',
             ], [
-                'amount.min' => 'Le montant minimum est de 1 000 FCFA',
+                'amount.min' => 'Le montant minimum est de 1 FCFA',
                 'amount.max' => 'Le montant maximum est de 1 000 000 FCFA',
                 'phone.required' => 'Le numéro de téléphone est requis',
                 'phone.regex' => 'Format de numéro de téléphone invalide',
             ]);
-            
+
             Log::info('Validation OK');
-            
-            // Nettoyer le numéro de téléphone
-            $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
-            if (!str_starts_with($phone, '225')) {
-                $phone = '225' . $phone;
-            }
-            
+
+            // Nettoyer le numéro de téléphone (le PaymentService se chargera du formatage)
+            $phone = preg_replace('/[^0-9+]/', '', $request->input('phone'));
+
             Log::info('Téléphone nettoyé', ['phone' => $phone]);
             
             // Vérifier si PaymentService existe

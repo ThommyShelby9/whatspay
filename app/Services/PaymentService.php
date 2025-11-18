@@ -146,15 +146,18 @@ class PaymentService
             // PayPlus accepte: +CCXXXXXXXXX (CC = country code)
             $cleanPhone = preg_replace('/[^0-9+]/', '', $customerPhone);
 
-            // Si le numéro commence déjà par un indicatif pays (2-3 chiffres), le garder
-            // Sinon, ajouter l'indicatif par défaut (229 pour Bénin)
+            // Si le numéro commence déjà par +, c'est bon
             if (!str_starts_with($cleanPhone, '+')) {
-                // Vérifier si le numéro commence déjà par un indicatif pays valide (225, 229, 237, etc.)
-                if (!preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9])/', $cleanPhone)) {
-                    // Pas d'indicatif pays détecté, ajouter 229 par défaut
-                    $cleanPhone = '229' . $cleanPhone;
+                // Vérifier si le numéro commence par un indicatif pays africain connu (3 chiffres)
+                // 221=SN, 223=ML, 224=GN, 225=CI, 226=BF, 227=NE, 228=TG, 229=BJ, 230=MU, 231=LR, etc.
+                if (preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9]|26[0-9]|27[0-9])/', $cleanPhone)) {
+                    // Le numéro commence déjà par un indicatif pays, juste ajouter le +
+                    $cleanPhone = '+' . $cleanPhone;
+                } else {
+                    // Numéro local béninois : enlever le 0 initial si présent, ajouter +229
+                    $cleanPhone = ltrim($cleanPhone, '0');
+                    $cleanPhone = '+229' . $cleanPhone;
                 }
-                $cleanPhone = '+' . $cleanPhone;
             }
 
             Log::info('Numéro de téléphone formaté', [
@@ -196,13 +199,13 @@ class PaymentService
                         'callback_url_method' => 'post_json'
                     ],
                     'custom_data' => [
-                        'transaction_id' => $transactionId,
+                        'transaction_id' => (string) $transactionId,
                         'user_id' => $userId,
                         'hash' => hash('sha256', $transactionId . $amount . $userId)
                     ]
                 ]
             ];
-            
+
             Log::info('Payload PayPlus préparé (doc officielle)', $payload);
 
             // Log détaillé pour debug
