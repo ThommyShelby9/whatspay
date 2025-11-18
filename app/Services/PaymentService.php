@@ -139,6 +139,24 @@ class PaymentService
             Log::info('Transaction créée en DB', ['id' => $paymentTransaction->id]);
             
             // ✅ Payload selon la documentation officielle PayPlus
+            // Récupérer les infos utilisateur pour un payload plus complet
+            $user = \App\Models\User::find($userId);
+
+            // Nettoyer et formater le numéro de téléphone pour PayPlus
+            // PayPlus accepte généralement: +229XXXXXXXX ou 229XXXXXXXX
+            $cleanPhone = preg_replace('/[^0-9+]/', '', $customerPhone);
+            if (!str_starts_with($cleanPhone, '+')) {
+                if (!str_starts_with($cleanPhone, '229')) {
+                    $cleanPhone = '229' . $cleanPhone;
+                }
+                $cleanPhone = '+' . $cleanPhone;
+            }
+
+            Log::info('Numéro de téléphone formaté', [
+                'original' => $customerPhone,
+                'cleaned' => $cleanPhone
+            ]);
+
             $payload = [
                 'commande' => [
                     'invoice' => [
@@ -154,10 +172,10 @@ class PaymentService
                         'total_amount' => $amount,
                         'devise' => 'XOF',
                         'description' => 'Rechargement compte WhatsPAY',
-                        'customer' => $customerPhone,
-                        'customer_firstname' => '',
-                        'customer_lastname' => '',
-                        'customer_email' => '',
+                        'customer' => $cleanPhone,
+                        'customer_firstname' => $user->firstname ?? 'Client',
+                        'customer_lastname' => $user->lastname ?? 'WhatsPAY',
+                        'customer_email' => $user->email ?? 'client@whatspay.africa',
                         'external_id' => $externalId,
                         'otp' => ''
                     ],
@@ -233,25 +251,34 @@ class PaymentService
                             
                             // ✅ Vérification selon la documentation : response_code = "00" = succès
                             if (isset($responseData['response_code']) && $responseData['response_code'] === '00') {
-                                
+
                                 // Update transaction with PayPlus response
                                 $paymentTransaction->update([
                                     'gateway_response' => json_encode($responseData)
                                 ]);
-                                
+
                                 Log::info('✅ Succès PayPlus', [
                                     'base_url' => $baseUrl,
                                     'response_code' => $responseData['response_code'],
                                     'token' => $responseData['token'] ?? 'N/A',
-                                    'redirect_url' => $responseData['response_text'] ?? 'N/A'
+                                    'redirect_url' => $responseData['response_text'] ?? 'N/A',
+                                    'full_response' => $responseData
                                 ]);
-                                
+
+                                // Log pour debug: vérifier si tous les champs sont présents
+                                if (!isset($responseData['response_text']) || empty($responseData['response_text'])) {
+                                    Log::warning('⚠️ PayPlus response_text manquant ou vide', [
+                                        'response_data' => $responseData
+                                    ]);
+                                }
+
                                 return [
                                     'success' => true,
                                     'message' => 'Redirection vers la passerelle de paiement',
                                     'redirect_url' => $responseData['response_text'],
                                     'transaction_id' => $transactionId,
-                                    'token' => $responseData['token'] ?? null
+                                    'token' => $responseData['token'] ?? null,
+                                    'debug_response' => config('app.debug') ? $responseData : null
                                 ];
                                 
                             } else {
