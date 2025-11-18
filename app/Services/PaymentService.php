@@ -143,10 +143,15 @@ class PaymentService
             $user = \App\Models\User::find($userId);
 
             // Nettoyer et formater le numéro de téléphone pour PayPlus
-            // PayPlus accepte généralement: +229XXXXXXXX ou 229XXXXXXXX
+            // PayPlus accepte: +CCXXXXXXXXX (CC = country code)
             $cleanPhone = preg_replace('/[^0-9+]/', '', $customerPhone);
+
+            // Si le numéro commence déjà par un indicatif pays (2-3 chiffres), le garder
+            // Sinon, ajouter l'indicatif par défaut (229 pour Bénin)
             if (!str_starts_with($cleanPhone, '+')) {
-                if (!str_starts_with($cleanPhone, '229')) {
+                // Vérifier si le numéro commence déjà par un indicatif pays valide (225, 229, 237, etc.)
+                if (!preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9])/', $cleanPhone)) {
+                    // Pas d'indicatif pays détecté, ajouter 229 par défaut
                     $cleanPhone = '229' . $cleanPhone;
                 }
                 $cleanPhone = '+' . $cleanPhone;
