@@ -47,11 +47,11 @@ return [
 
     'limits' => [
         'deposit' => [
-            'min' => env('PAYPLUS_MIN_DEPOSIT', 1000),
+            'min' => env('PAYPLUS_MIN_DEPOSIT', 1),
             'max' => env('PAYPLUS_MAX_DEPOSIT', 1000000),
         ],
         'withdrawal' => [
-            'min' => env('PAYPLUS_MIN_WITHDRAWAL', 500),
+            'min' => env('PAYPLUS_MIN_WITHDRAWAL', 1),
             'max' => env('PAYPLUS_MAX_WITHDRAWAL', 500000),
         ],
     ],

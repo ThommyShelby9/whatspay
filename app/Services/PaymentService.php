@@ -67,11 +67,11 @@ class PaymentService
         
         try {
             // Validation
-            if ($amount < 1000) {
+            if ($amount < 1) {
                 Log::warning('Montant trop faible', ['amount' => $amount]);
                 return [
                     'success' => false,
-                    'message' => 'Le montant minimum de dépôt est de 1000 FCFA'
+                    'message' => 'Le montant minimum de dépôt est de 1 FCFA'
                 ];
             }
             
@@ -411,10 +411,10 @@ class PaymentService
                 ];
             }
             
-            if ($amount < 500) { // Minimum 500 XOF withdrawal
+            if ($amount < 1) { // Minimum 1 XOF withdrawal
                 return [
                     'success' => false,
-                    'message' => 'Le montant minimum de retrait est de 500 FCFA'
+                    'message' => 'Le montant minimum de retrait est de 1 FCFA'
                 ];
             }
             
