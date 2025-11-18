@@ -201,8 +201,6 @@ class PaymentService
             ];
 
             Log::info('Payload PayPlus préparé (doc officielle)', $payload);
-            dd($payload);
-
             // Log détaillé pour debug
             Log::info('🔍 DEBUG PAYPLUS - Payload détaillé', [
                 'customer_phone' => $cleanPhone,
