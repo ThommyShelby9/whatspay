@@ -183,8 +183,11 @@ class PaymentService
                         'customer_email' => $user->email ?? 'client@whatspay.africa',
                         'external_id' => $externalId,
                         'otp' => '',
-                        // Spécifier les moyens de paiement disponibles
-                        'network' => ['MOOV_BENIN', 'MTN_BENIN', 'WAVE_SENEGAL', 'ORANGE_MONEY_CI', 'MTN_CI', 'MOOV_CI']
+                        'network' => '' // Laisser vide pour afficher tous les opérateurs configurés
+                    ],
+                    'store' => [
+                        'name' => config('payplus.store.name', 'WhatsPAY'),
+                        'website_url' => config('payplus.store.website_url', config('app.url'))
                     ],
                     'actions' => [
                         'cancel_url' => route('announcer.wallet') . '?status=cancelled',
@@ -227,7 +230,7 @@ class PaymentService
             // URLs de base à tester (selon la documentation et les variations connues)
             $baseUrlsToTry = [
                 $this->payPlusBaseUrl,
-                'https://api.payplus.africa',
+                'https://app.payplus.africa',
                 'https://payplus.africa',
                 'https://gateway.payplus.africa'
             ];
