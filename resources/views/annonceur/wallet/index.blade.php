@@ -228,7 +228,7 @@
             <div class="col-12">
               <div class="alert alert-info">
                 <i class="fa fa-info-circle me-2"></i>
-                <strong>Montants:</strong> Minimum 1 000 FCFA - Maximum 1 000 000 FCFA
+                <strong>Montants:</strong> Minimum 1 FCFA - Maximum 1 000 000 FCFA
               </div>
             </div>
           </div>
@@ -238,13 +238,13 @@
               <div class="mb-3">
                 <label class="form-label">Montant (FCFA) *</label>
                 <div class="input-group">
-                  <input type="number" class="form-control" name="amount" id="deposit-amount" 
-                         min="1000" max="1000000" step="1000" placeholder="Montant" required>
+                  <input type="number" class="form-control" name="amount" id="deposit-amount"
+                         min="1" max="1000000" step="1" placeholder="Montant" required>
                   <span class="input-group-text">F</span>
                 </div>
                 <div class="form-text">
                   <div class="d-flex justify-content-between">
-                    <span>Montant minimum: 1 000 F</span>
+                    <span>Montant minimum: 1 F</span>
                     <span>Montant maximum: 1 000 000 F</span>
                   </div>
                 </div>
@@ -320,7 +320,7 @@
           <div class="mb-4">
             <label class="form-label">Montants suggérés</label>
             <div class="row">
-              @foreach([5000, 10000, 25000, 50000, 100000, 250000] as $amount)
+              @foreach([100, 500, 1000, 5000, 10000, 25000] as $amount)
                 <div class="col-md-4 col-sm-6 mb-2">
                   <button type="button" class="btn btn-light w-100 suggested-amount" data-amount="{{ $amount }}">
                     {{ number_format($amount, 0, ',', ' ') }} F
@@ -374,9 +374,9 @@ $(document).ready(function() {
         var paymentMethod = $('input[name="payment_method"]:checked').val();
         
         // Validation du montant
-        if (amount < 1000) {
+        if (amount < 1) {
             e.preventDefault();
-            alert('Le montant minimum est de 1 000 FCFA');
+            alert('Le montant minimum est de 1 FCFA');
             return false;
         }
         

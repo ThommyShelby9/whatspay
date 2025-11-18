@@ -199,6 +199,16 @@ class PaymentService
             ];
             
             Log::info('Payload PayPlus préparé (doc officielle)', $payload);
+
+            // Log détaillé pour debug
+            Log::info('🔍 DEBUG PAYPLUS - Payload détaillé', [
+                'customer_phone' => $cleanPhone,
+                'amount' => $amount,
+                'customer_email' => $user->email ?? 'client@whatspay.africa',
+                'external_id' => $externalId,
+                'callback_url' => $callbackUrl,
+                'return_url' => route('announcer.wallet') . '?status=success',
+            ]);
             
             // ✅ Endpoint selon la documentation officielle
             $endpoint = $useRedirect ? 
@@ -268,6 +278,13 @@ class PaymentService
                                     'token' => $responseData['token'] ?? 'N/A',
                                     'redirect_url' => $responseData['response_text'] ?? 'N/A',
                                     'full_response' => $responseData
+                                ]);
+
+                                // Log spécial pour identifier le problème des opérateurs
+                                Log::info('🔗 URL DE REDIRECTION PAYPLUS', [
+                                    'url' => $responseData['response_text'],
+                                    'message' => 'Copie cette URL et ouvre-la dans le navigateur pour voir ce que PayPlus affiche',
+                                    'token_payplus' => $responseData['token'] ?? 'N/A',
                                 ]);
 
                                 // Log pour debug: vérifier si tous les champs sont présents
