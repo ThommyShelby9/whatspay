@@ -143,21 +143,15 @@ class PaymentService
             $user = \App\Models\User::find($userId);
 
             // Nettoyer et formater le numéro de téléphone pour PayPlus
-            // PayPlus accepte: +CCXXXXXXXXX (CC = country code)
-            $cleanPhone = preg_replace('/[^0-9+]/', '', $customerPhone);
+            // PayPlus accepte: CCXXXXXXXXX (CC = country code, sans le +)
+            $cleanPhone = preg_replace('/[^0-9]/', '', $customerPhone);
 
-            // Si le numéro commence déjà par +, c'est bon
-            if (!str_starts_with($cleanPhone, '+')) {
-                // Vérifier si le numéro commence par un indicatif pays africain connu (3 chiffres)
-                // 221=SN, 223=ML, 224=GN, 225=CI, 226=BF, 227=NE, 228=TG, 229=BJ, 230=MU, 231=LR, etc.
-                if (preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9]|26[0-9]|27[0-9])/', $cleanPhone)) {
-                    // Le numéro commence déjà par un indicatif pays, juste ajouter le +
-                    $cleanPhone = '+' . $cleanPhone;
-                } else {
-                    // Numéro local béninois : enlever le 0 initial si présent, ajouter +229
-                    $cleanPhone = ltrim($cleanPhone, '0');
-                    $cleanPhone = '+229' . $cleanPhone;
-                }
+            // Vérifier si le numéro commence par un indicatif pays africain connu (3 chiffres)
+            // 221=SN, 223=ML, 224=GN, 225=CI, 226=BF, 227=NE, 228=TG, 229=BJ, 230=MU, 231=LR, etc.
+            if (!preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9]|26[0-9]|27[0-9])/', $cleanPhone)) {
+                // Numéro local béninois : ajouter 229 (garder le 0 initial)
+                // Exemple: 0161368424 → 2290161368424
+                $cleanPhone = '229' . $cleanPhone;
             }
 
             Log::info('Numéro de téléphone formaté', [
@@ -207,6 +201,7 @@ class PaymentService
             ];
 
             Log::info('Payload PayPlus préparé (doc officielle)', $payload);
+            dd($payload);
 
             // Log détaillé pour debug
             Log::info('🔍 DEBUG PAYPLUS - Payload détaillé', [
@@ -471,12 +466,28 @@ class PaymentService
                     'use_internal_wallet' => $useInternalWallet
                 ])
             ]);
-            
+
+            // Nettoyer et formater le numéro de téléphone pour PayPlus
+            // PayPlus accepte: CCXXXXXXXXX (CC = country code, sans le +)
+            $cleanPhone = preg_replace('/[^0-9]/', '', $customerPhone);
+
+            // Vérifier si le numéro commence par un indicatif pays africain connu (3 chiffres)
+            if (!preg_match('/^(22[0-9]|23[0-9]|24[0-9]|25[0-9]|26[0-9]|27[0-9])/', $cleanPhone)) {
+                // Numéro local béninois : ajouter 229 (garder le 0 initial)
+                // Exemple: 0161368424 → 2290161368424
+                $cleanPhone = '229' . $cleanPhone;
+            }
+
+            Log::info('Numéro de téléphone formaté pour retrait', [
+                'original' => $customerPhone,
+                'cleaned' => $cleanPhone
+            ]);
+
             // ✅ Payload selon la documentation officielle PayPlus pour les retraits
             $payload = [
                 'commande' => [
                     'amount' => $amount,
-                    'customer' => $customerPhone,
+                    'customer' => $cleanPhone,
                     'custom_data' => [
                         'transaction_id' => $transactionId,
                         'user_id' => $userId,
