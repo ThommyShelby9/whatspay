@@ -231,7 +231,7 @@ class UserService
             if (!empty($userData['occupation_id'])) $updateData['occupation_id'] = $userData['occupation_id'];
             if (!empty($userData['occupation'])) $updateData['occupation'] = $userData['occupation'];
             if (!empty($userData['phone'])) $updateData['phone'] = $userData['phone'];
-            if ($userData['enabled'] !== null) $updateData['enabled'] = $userData['enabled'];
+            if (!empty($userData['enabled']) && $userData['enabled'] !== null) $updateData['enabled'] = $userData['enabled'];
             if (!empty($userData['vuesmoyen'])) $updateData['vuesmoyen'] = $userData['vuesmoyen'];
 
             if (!empty($userData['password'])) {

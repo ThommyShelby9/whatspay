@@ -369,7 +369,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="{{ route('admin.task', ['id' => $task->id]) }}"
+                                                    <a href="{{ route('announcer.campaigns.show', ['id' => $task->id]) }}"
                                                         class="btn btn-primary btn-sm"><i class="fa fa-eye"></i></a>
                                                     @if ($task->status == 'PENDING')
                                                         <a href="#" class="btn btn-warning btn-sm"

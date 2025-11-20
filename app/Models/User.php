@@ -138,4 +138,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Task::class, 'client_id');
     }
+
+    /**
+     * Les tâches assignées à l'utilisateur en tant qu'agent (diffuseur).
+     */
+    public function assignmentsAsAgent()
+    {
+        return $this->hasMany(Assignment::class, 'agent_id');
+    }
+
+    /**
+     * Les tâches que l'utilisateur a assignées (si admin/modérateur).
+     */
+    public function assignmentsGiven()
+    {
+        return $this->hasMany(Assignment::class, 'assigner_id');
+    }
 }

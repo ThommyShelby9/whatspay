@@ -109,6 +109,9 @@ class TestDataSeeder extends Seeder
         // ========================================
         $this->command->info('📱 Création des 5 diffuseurs...');
 
+        $testLocality = Locality::where('country_id', $country->id)->first();
+        $testOccupation = Occupation::where('enabled', true)->first();
+
         $diffuseurs = [];
         $diffuseurData = [
             [
@@ -169,8 +172,8 @@ class TestDataSeeder extends Seeder
                     'enabled' => true,
                     'email_verified_at' => now(),
                     'country_id' => $country->id,
-                    'locality_id' => $localities->random()->id ?? null,
-                    'occupation_id' => $occupation->id,
+                    'locality_id' => $testLocality->id,
+                    'occupation_id' => $testOccupation->id,
                     'phone' => '+229' . rand(60000000, 99999999),
                     'vuesmoyen' => $data['vuesmoyen'],
                 ]);
@@ -192,61 +195,50 @@ class TestDataSeeder extends Seeder
         $this->command->info('📢 Création des campagnes pour chaque annonceur...');
 
         $tasks = [];
-        $taskTypes = ['URL', 'TXT', 'IMG', 'VID'];
-        $taskStatuses = ['PENDING', 'PAID', 'ACCEPTED'];
+        //$taskTypes = ['URL', 'TXT', 'IMG', 'VID'];
+        //$taskStatuses = ['PENDING'];
 
-        foreach ($annonceurs as $index => $annonceur) {
-            $numberOfCampaigns = rand(2, 5);
-            $this->command->info("   Annonceur: {$annonceur->firstname} {$annonceur->lastname} - {$numberOfCampaigns} campagnes");
+        foreach ($annonceurs as $annonceur) {
+            $numberOfCampaigns = 3; // Fixe volontairement pour les tests
 
             for ($i = 1; $i <= $numberOfCampaigns; $i++) {
-                $type = $taskTypes[array_rand($taskTypes)];
-                $startDate = Carbon::now()->subDays(rand(0, 10));
-                $endDate = $startDate->copy()->addDays(rand(7, 30));
-                $budget = rand(50, 500) * 1000; // Entre 50,000 et 500,000 FR
 
-                $campaignNames = [
-                    'Promotion Nouveau Produit',
-                    'Campagne de Sensibilisation',
-                    'Lancement de Service',
-                    'Offre Spéciale Weekend',
-                    'Programme de Fidélité',
-                    'Événement Communautaire',
-                    'Nouvelle Collection',
-                    'Concours Gagnant',
-                ];
+                // Dates toujours actives
+                $startDate = Carbon::now()->subDays(2);
+                $endDate   = Carbon::now()->addDays(5);
+
+                // Budget toujours > 0
+                $budget = rand(100, 200) * 1000;
 
                 $task = Task::create([
                     'id' => Str::uuid(),
-                    'name' => $campaignNames[array_rand($campaignNames)] . ' ' . $i,
-                    'descriptipon' => "Campagne de marketing pour promouvoir nos services/produits auprès de la communauté ciblée. Type: {$type}",
-                    'type' => $type,
-                    'url' => $type === 'URL' ? 'https://example.com/promo' . $i : null,
-                    'text' => $type === 'TXT' ? 'Découvrez notre nouvelle offre exceptionnelle ! Contactez-nous dès maintenant.' : null,
-                    'legend' => 'Partagez cette information avec votre communauté WhatsApp',
+                    'name' => "Campagne Test #{$i} - {$annonceur->firstname}",
+                    'descriptipon' => "Campagne de test automatique.",
+                    'type' => 'URL',
+                    'url' => 'https://example.com/test',
+                    'legend' => 'Partagez ce message',
                     'startdate' => $startDate,
                     'enddate' => $endDate,
                     'budget' => $budget,
-                    'status' => $taskStatuses[array_rand($taskStatuses)],
+                    'status' => 'ACCEPTED', // IMPORTANT
                     'client_id' => $annonceur->id,
-                    'locality_id' => $localities->random()->id ?? null,
-                    'occupation_id' => $occupations->random()->id ?? null,
+                    'locality_id' => $testLocality->id,
+                    'occupation_id' => $testOccupation->id,
                 ]);
 
-                // Attacher des catégories à la campagne
-                $task->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
-                $task->localities()->attach($localities->random(rand(1, 3))->pluck('id'));
-                $task->occupations()->attach($occupations->random(rand(1, 3))->pluck('id'));
+                // Ajouter des catégories
+                $task->categories()->attach($categories->random(2)->pluck('id'));
 
                 $tasks[] = $task;
-                $this->command->info("      ✓ Campagne {$i}: {$task->name} (Budget: " . number_format($budget, 0, ',', ' ') . " FR)");
+
+                $this->command->info("   ➤ Task ACTIVE créée : {$task->name} | Loc: {$testLocality->name}, Occ: {$testOccupation->name}");
             }
         }
 
         // ========================================
         // 4. CRÉATION DES ASSIGNMENTS
         // ========================================
-        $this->command->info('🎯 Création des assignments (attribution des campagnes aux diffuseurs)...');
+        /* $this->command->info('🎯 Création des assignments (attribution des campagnes aux diffuseurs)...');
 
         $assignmentStatuses = ['PENDING', 'ACCEPTED', 'REJECTED', 'SUBMITED', 'SUBMISSION_ACCEPTED', 'PAID'];
         $admin = User::whereHas('roles', function($q) use ($adminRole) {
@@ -293,7 +285,7 @@ class TestDataSeeder extends Seeder
                 $assignmentCount++;
                 $this->command->info("   ✓ Assignment #{$assignmentCount}: {$task->name} → {$diffuseur->firstname} {$diffuseur->lastname} (Statut: {$status})");
             }
-        }
+        } */
 
         // ========================================
         // RÉSUMÉ
@@ -305,7 +297,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('   • Annonceurs: ' . count($annonceurs));
         $this->command->info('   • Diffuseurs: ' . count($diffuseurs));
         $this->command->info('   • Campagnes (Tasks): ' . count($tasks));
-        $this->command->info('   • Assignments: ' . $assignmentCount);
+        //$this->command->info('   • Assignments: ' . $assignmentCount);
         $this->command->info('');
         $this->command->info('🔑 COMPTES DE TEST:');
         $this->command->info('');
@@ -326,7 +318,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('   • DIFFUSEURS reçoivent des assignments pour exécuter les campagnes');
         $this->command->info('   • Gain = 1 FR par vue (basé sur vuesmoyen du diffuseur)');
         $this->command->info('   • Max 3 assignments actifs par diffuseur');
-        $this->command->info('   • Statuts: PENDING → ACCEPTED → SUBMITED → SUBMISSION_ACCEPTED → PAID');
+        //$this->command->info('   • Statuts: PENDING → ACCEPTED → SUBMITED → SUBMISSION_ACCEPTED → PAID');
         $this->command->info('');
     }
 }

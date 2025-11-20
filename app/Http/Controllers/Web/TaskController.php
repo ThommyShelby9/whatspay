@@ -320,7 +320,8 @@ class TaskController extends Controller
                     'categories' => $request->categories ?? [],
                     'localities' => $request->localities,
                     'occupations' => $request->occupations,
-                    'files' => !empty($filesData) ? json_encode($filesData) : null
+                    'files' => !empty($filesData) ? json_encode($filesData) : null,
+                    'view_price' => $request->view_price ?? 3.5
                 ];
 
                 if ($id == 'new') {
@@ -382,7 +383,8 @@ class TaskController extends Controller
                 'enddate' => $enddate,
                 'budget' => $request->budget,
                 'client_id' => $request->session()->get('userid'),
-                'categories' => $selectedCategories
+                'categories' => $selectedCategories,
+                'view_price' => $request->view_price ?? 3.5
             ];
 
             if ($id == 'new') {
@@ -426,7 +428,7 @@ class TaskController extends Controller
 
         if ($result['success']) {
             $alert = [
-                'message' => 'Campagne approuvée avec succès',
+                'message' => 'Campagne approuvée avec succès et assigné aux diffuseurs',
                 'type' => 'success'
             ];
         } else {

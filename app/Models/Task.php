@@ -42,7 +42,9 @@ class Task extends Model
         'legend',
         'task_id',
         'budget_reserved_at',
-        'budget_released_at'
+        'budget_released_at',
+        'view_price',
+        'total_views_estimated'
     ];
 
     /**
@@ -67,5 +69,13 @@ class Task extends Model
     public function client()
     {
         return $this->belongsTo(User::class, 'client_id');
+    }
+
+    /**
+     * Assignations liées à cette tâche.
+     */
+    public function assignments()
+    {
+        return $this->hasMany(Assignment::class);
     }
 }

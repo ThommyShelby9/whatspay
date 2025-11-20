@@ -13,11 +13,11 @@ use Illuminate\Http\Request;
 class CampaignController extends Controller
 {
     use Utils;
-    
+
     protected $taskService;
     protected $assignmentService;
     protected $categoryService;
-    
+
     public function __construct(
         TaskService $taskService,
         AssignmentService $assignmentService,
@@ -27,22 +27,22 @@ class CampaignController extends Controller
         $this->assignmentService = $assignmentService;
         $this->categoryService = $categoryService;
     }
-    
+
     public function available(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les campagnes disponibles
-        // Logique à implémenter selon les critères d'éligibilité
-        $viewData["availableTasks"] = []; // Appeler le service approprié
+        $viewData["availableTasks"] = $this->assignmentService->getAvailableAgentTasks($userId);
+
         $viewData["categories"] = $this->categoryService->getAllCategories();
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('influencer.campaigns.available', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -52,21 +52,21 @@ class CampaignController extends Controller
             'pagecardtilte' => 'Découvrez les opportunités'
         ]);
     }
-    
-    public function assigned(Request $request)
+
+    public function accepted(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les campagnes assignées
         $viewData["assignments"] = $this->assignmentService->getAgentAssignments($userId);
-        
+
         $this->setViewData($request, $viewData);
-        
-        return view('influencer.campaigns.assigned', [
+
+        return view('influencer.campaigns.accepted', [
             'alert' => $alert,
             'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
@@ -75,29 +75,72 @@ class CampaignController extends Controller
             'pagecardtilte' => 'Campagnes en cours'
         ]);
     }
-    
-    public function show(Request $request, $id)
+
+    public function accepte(Request $request, string $id)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les détails de la mission
         $assignment = $this->assignmentService->getAssignmentById($id);
-        
+
         // Vérifier que la mission appartient bien au diffuseur
         if (!$assignment || $assignment->agent_id != $userId) {
             return redirect()->route('influencer.campaigns.assigned')
                 ->with('type', 'danger')
                 ->with('message', 'Mission non trouvée ou non autorisée');
         }
-        
-        $viewData["assignment"] = $assignment;
-        
+
+        // Ne pas accepter une mission déjà acceptée ou refusée
+        if ($assignment->status == 'PENDING') {
+            return back()->with('type', 'warning')->with('message', 'Cette mission a déjà été traitée.');
+        }
+
+        // Accepter la mission
+        $assignment->update([
+            'status' => 'PENDING',
+            'response_date' => now(),
+        ]);
+
+        $viewData['assignments'] = $this->assignmentService->getClientAssignments($userId);
+
         $this->setViewData($request, $viewData);
-        
+
+        return view('influencer.campaigns.accepted', [
+            'alert' => $alert,
+            'viewData' => $viewData,
+            'version' => gmdate("YmdHis"),
+            'title' => 'WhatsPAY | Mes Missions',
+            'pagetilte' => 'Mes Missions',
+            'pagecardtilte' => 'Campagnes en cours'
+        ]);
+    }
+
+    public function show(Request $request, $id)
+    {
+        $viewData = [];
+        $alert = [];
+        $this->setAlert($request, $alert);
+
+        $userId = $request->session()->get('userid');
+
+        // Récupérer les détails de la mission
+        $assignment = $this->assignmentService->getAssignmentById($id);
+
+        // Vérifier que la mission appartient bien au diffuseur
+        if (!$assignment || $assignment->agent_id != $userId) {
+            return redirect()->route('influencer.campaigns.assigned')
+                ->with('type', 'danger')
+                ->with('message', 'Mission non trouvée ou non autorisée');
+        }
+
+        $viewData["assignment"] = $assignment;
+
+        $this->setViewData($request, $viewData);
+
         return view('influencer.campaigns.show', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -107,29 +150,29 @@ class CampaignController extends Controller
             'pagecardtilte' => 'Informations sur la campagne'
         ]);
     }
-    
+
     public function submit(Request $request, $id)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les détails de la mission
         $assignment = $this->assignmentService->getAssignmentById($id);
-        
+
         // Vérifier que la mission appartient bien au diffuseur
         if (!$assignment || $assignment->agent_id != $userId) {
             return redirect()->route('influencer.campaigns.assigned')
                 ->with('type', 'danger')
                 ->with('message', 'Mission non trouvée ou non autorisée');
         }
-        
+
         $viewData["assignment"] = $assignment;
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('influencer.campaigns.submit', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -139,38 +182,38 @@ class CampaignController extends Controller
             'pagecardtilte' => 'Finaliser la campagne'
         ]);
     }
-    
-// Dans App\Http\Controllers\Web\Influencer\CampaignController.php
 
-public function storeSubmission(Request $request, $id)
-{
-    $userId = $request->session()->get('userid');
-    
-    // Valider les données soumises
-    $request->validate([
-        'vues' => 'required|numeric|min:0',
-        'files' => 'required|string',
-    ]);
-    
-    $submissionData = [
-        'agent_id' => $userId,
-        'vues' => $request->input('vues'),
-        'files' => $request->input('files'),
-    ];
-    
-    $result = $this->assignmentService->submitResult($id, $submissionData);
-    
-    if ($result['success']) {
-        return redirect()->route('influencer.campaigns.assigned')
-            ->with('type', 'success')
-            ->with('message', 'Résultats soumis avec succès');
-    } else {
-        return redirect()->back()
-            ->with('type', 'danger')
-            ->with('message', $result['message']);
+    // Dans App\Http\Controllers\Web\Influencer\CampaignController.php
+
+    public function storeSubmission(Request $request, $id)
+    {
+        $userId = $request->session()->get('userid');
+
+        // Valider les données soumises
+        $request->validate([
+            'vues' => 'required|numeric|min:0',
+            'files' => 'required|file|max:15000',
+        ]);
+
+        $submissionData = [
+            'agent_id' => $userId,
+            'vues' => $request->input('vues'),
+            'files' => $request->input('files'),
+        ];
+
+        $result = $this->assignmentService->submitResult($id, $submissionData);
+
+        if ($result['success']) {
+            return redirect()->route('influencer.campaigns.accepted')
+                ->with('type', 'success')
+                ->with('message', 'Résultats soumis avec succès');
+        } else {
+            return redirect()->back()
+                ->with('type', 'danger')
+                ->with('message', $result['message']);
+        }
     }
-}
-    
+
     private function setAlert(Request &$request, &$alert)
     {
         $alert = [

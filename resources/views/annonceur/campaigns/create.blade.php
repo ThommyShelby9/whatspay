@@ -54,8 +54,9 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label class="form-label">Budget (F) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="budget" required>
-                                        <small class="text-muted">Minimum 1000F</small>
+                                        <input type="number" class="form-control" name="budget" id="budgetInput" required>
+                                        <small class="text-muted">Minimum 1000F | <span id="viewsEstimated">0 vue(s)
+                                                estimée(s)</span></small>
                                     </div>
                                 </div>
                             </div>
@@ -189,7 +190,7 @@
 
                                             <div class="mt-3">
                                                 <input type="file" id="campaign-files" name="campaign_files[]"
-                                                    class="form-control" multiple accept="image/*,video/*">
+                                                    class="form-control" accept="image/*,video/*">
                                             </div>
 
                                             <div id="preview-container" class="row mt-3">
@@ -350,7 +351,7 @@
                 // Gestion de la prévisualisation des fichiers
                 $('#campaign-files').on('change', function() {
                     const fileInput = this;
-                    const previewContainer = $('#file-preview');
+                    const previewContainer = $('#preview-container');
                     previewContainer.empty();
 
                     if (fileInput.files && fileInput.files.length > 0) {
@@ -521,6 +522,18 @@
 
                     // Si tout est valide
                     return true;
+                });
+
+                const viewPrice = 3.5;
+
+                $('#budgetInput').on('input', function() {
+                    const budget = parseFloat($(this).val());
+                    if (!isNaN(budget) && budget >= 0) {
+                        const estimatedViews = Math.floor(budget / viewPrice);
+                        $('#viewsEstimated').text(`${estimatedViews} vue(s) estimée(s)`);
+                    } else {
+                        $('#viewsEstimated').text(`0 vue(s) estimée(s)`);
+                    }
                 });
             });
         </script>

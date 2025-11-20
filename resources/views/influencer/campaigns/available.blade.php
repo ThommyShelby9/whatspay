@@ -92,21 +92,22 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0">{{ $task->name ?? 'Sans titre' }}</h5>
-                                <span class="badge bg-primary">{{ number_format($task->budget ?? 0) }} F</span>
+                                <h5 class="mb-0">{{ $task->task->name ?? 'Sans titre' }}</h5>
+                                <span>{{ number_format($task->task->total_views_estimated ?? 0) }}
+                                    vue(s)</span>
                             </div>
 
                             <p class="text-muted mb-3">
-                                {{ Str::limit($task->descriptipon ?? 'Aucune description disponible', 100) }}
+                                {{ Str::limit($task->task->descriptipon ?? 'Aucune description disponible', 100) }}
                             </p>
 
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="text-muted">Période</span>
                                     <span class="fw-bold">
-                                        {{ isset($task->startdate) ? date('d/m/Y', strtotime($task->startdate)) : 'N/A' }}
+                                        {{ isset($task->task->startdate) ? date('d/m/Y', strtotime($task->task->startdate)) : 'N/A' }}
                                         -
-                                        {{ isset($task->enddate) ? date('d/m/Y', strtotime($task->enddate)) : 'N/A' }}
+                                        {{ isset($task->task->enddate) ? date('d/m/Y', strtotime($task->task->enddate)) : 'N/A' }}
                                     </span>
                                 </div>
                             </div>
@@ -114,9 +115,9 @@
                             <div class="mb-3">
                                 <span class="text-muted d-block mb-2">Catégories</span>
                                 <div class="d-flex flex-wrap">
-                                    @if (!empty($task->categories))
-                                        @foreach ($task->categories as $cat)
-                                            <span class="badge bg-info me-1 mb-1">{{ $cat->name }}</span>
+                                    @if (!empty($task->task->categories))
+                                        @foreach ($task->task->categories as $cat)
+                                            <span class="badge bg-info mb-1">{{ Str::limit($cat->name, 25, '...') }}</span>
                                         @endforeach
                                     @else
                                         <span class="text-muted">Aucune catégorie</span>
@@ -124,10 +125,15 @@
                                 </div>
                             </div>
 
-                            <div class="mt-3 text-center">
-                                <button type="button" class="btn btn-success btn-sm w-100 apply-btn"
+                            <div class="d-flex gap-3 align-items-center mt-4">
+                                <a href="{{ route('influencer.campaigns.show', ['id' => $task->id]) }}"
+                                    class="btn btn-light btn-sm apply-btn">
+                                    <i class="fa fa-eye me-1"></i>Voir
+                                </a>
+
+                                <button type="button" class="btn btn-success btn-sm apply-btn"
                                     data-task-id="{{ $task->id }}" data-bs-toggle="modal" data-bs-target="#applyModal">
-                                    <i class="fa fa-check-circle me-1"></i>Postuler
+                                    <i class="fa fa-check-circle me-1"></i>Participer
                                 </button>
                             </div>
                         </div>
@@ -137,8 +143,8 @@
                 <div class="col-12">
                     <div class="card">
                         <div class="card-body text-center py-5">
-                            <img src="{{ asset('images/empty-state.svg') }}" alt="Aucune campagne" height="120"
-                                class="mb-4">
+                            {{-- <img src="{{ asset('images/empty-state.svg') }}" alt="Aucune campagne" height="120"
+                                class="mb-4"> --}}
                             <h5>Aucune campagne disponible</h5>
                             <p class="text-muted">Il n'y a actuellement aucune campagne disponible correspondant à vos
                                 critères.</p>
@@ -165,33 +171,36 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Postuler à la campagne</h5>
+                    <h5 class="modal-title">Partciper à la campagne</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="applicationForm" method="post">
                         @csrf
-                        <input type="hidden" name="task_id" id="taskIdInput">
+                        @method('PUT')
 
-                        <div class="mb-3">
+                        <p>En participant à cette campagne, vous vous engagez à atteindre le nombre de vues estimé indiqué
+                            sur votre profil.</p>
+
+                        {{-- <div class="mb-3">
                             <label class="form-label">Message de candidature (optionnel)</label>
                             <textarea class="form-control" name="message" rows="4"
                                 placeholder="Expliquez pourquoi vous êtes le meilleur diffuseur pour cette campagne..."></textarea>
-                        </div>
+                        </div> --}}
 
-                        <div class="mb-3">
+                        {{-- <div class="mb-3">
                             <label class="form-label">Vues estimées</label>
                             <input type="number" class="form-control" name="estimated_views" required min="0"
                                 placeholder="Ex: 1000">
                             <div class="form-text">
                                 Indiquez une estimation réaliste du nombre de vues que vous pouvez générer.
                             </div>
+                        </div> --}}
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                            <button type="submit" class="btn btn-primary" id="submitApplication">Participer</button>
                         </div>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-primary" id="submitApplication">Envoyer ma candidature</button>
                 </div>
             </div>
         </div>
@@ -199,22 +208,19 @@
 
     @push('scripts')
         <script>
-            $(document).ready(function() {
-                // Mettre à jour l'ID de la tâche dans le modal
-                $('.apply-btn').click(function() {
-                    var taskId = $(this).data('task-id');
-                    $('#taskIdInput').val(taskId);
-                });
+            $(document).on('click', '.apply-btn', function() {
 
-                // Soumettre la candidature
-                $('#submitApplication').click(function() {
-                    // Placeholder for application submission logic
-                    // You would typically submit the form via AJAX here
+                let taskId = $(this).data('task-id'); // <-- tu avais oublié ça
 
-                    // For demo purposes, show success message and close modal
-                    alert('Votre candidature a été soumise avec succès !');
-                    $('#applyModal').modal('hide');
-                });
+                console.log("Task ID =", taskId);
+
+                $('#applicationForm').attr('action', '/admin/influencer/agent/campaigns/' + taskId + '/accepte');
+            });
+
+            // Soumission du formulaire
+            $('#submitApplication').on('click', function() {
+                console.log('SUBMITTED');
+                $('#applicationForm').submit();
             });
         </script>
     @endpush

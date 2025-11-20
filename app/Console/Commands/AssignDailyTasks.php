@@ -30,11 +30,15 @@ class AssignDailyTasks extends Command
     public function handle(TaskAssignmentService $assignmentService)
     {
         $this->info('Début de l\'attribution des tâches...');
-        
-        $assignmentService->assignDailyTasks();
-        
+
+        $count = $assignmentService->assignDailyTasks();
+
+        $this->info("Nombre de diffuseurs éligibles : {$count}");
+
+        \Log::channel('daily')->info("Assignation quotidienne – {$count} diffuseurs éligibles.");
+
         $this->info('Attribution des tâches terminée avec succès.');
-        
+
         return 0;
     }
 }

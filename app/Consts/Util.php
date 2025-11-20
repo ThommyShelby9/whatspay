@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Consts;
 
 class Util
@@ -37,8 +38,8 @@ class Util
   ];
 
   const ASSIGNMENTS_STATUSES = [
+    'ASSIGNED' => 'ASSIGNED',
     'PENDING' => 'PENDING',
-    'ACCEPTED' => 'ACCEPTED',
     'REJECTED' => 'REJECTED',
     'SUBMITED' => 'SUBMITED',
     'SUBMISSION_ACCEPTED' => 'SUBMISSION_ACCEPTED',
@@ -53,11 +54,10 @@ class Util
   ];
 
   const TASKS_TYPES = [
-    'URL' => ['CODE'=>'URL', 'DESCRIPTION'=>'Publication de type Lien accompagnée d\'un texte descriptif', 'UPLOAD'=>false, 'MAX_FILE'=>0, 'EXTENSIONS' =>'', 'URL' => true],
-    'TXT' => ['CODE'=>'TXT', 'DESCRIPTION'=>'Publication de type Texte', 'UPLOAD'=>false, 'MAX_FILE'=>0, 'EXTENSIONS' =>'', 'URL' => false],
-    'IMG' => ['TYPE'=>'IMG', 'DESCRIPTION'=>'Publication de type Image accompagnée d\'un texte descriptif', 'UPLOAD'=>true, 'MAX_FILE'=>1, 'EXTENSIONS' =>'image/*', 'URL' => false],
-    'VID' => ['TYPE'=>'VID', 'DESCRIPTION'=>'Publication de type Video accompagnée d\'un texte descriptif', 'UPLOAD'=>true, 'MAX_FILE'=>1, 'EXTENSIONS' =>'video/*', 'URL' => false],
-    'AUD' => ['TYPE'=>'AUD', 'DESCRIPTION'=>'Publication de type Audio accompagnée d\'un texte descriptif', 'UPLOAD'=>true, 'MAX_FILE'=>1, 'EXTENSIONS' =>'.mp3', 'URL' => false],
+    'URL' => ['CODE' => 'URL', 'DESCRIPTION' => 'Publication de type Lien accompagnée d\'un texte descriptif', 'UPLOAD' => false, 'MAX_FILE' => 0, 'EXTENSIONS' => '', 'URL' => true],
+    'TXT' => ['CODE' => 'TXT', 'DESCRIPTION' => 'Publication de type Texte', 'UPLOAD' => false, 'MAX_FILE' => 0, 'EXTENSIONS' => '', 'URL' => false],
+    'IMG' => ['TYPE' => 'IMG', 'DESCRIPTION' => 'Publication de type Image accompagnée d\'un texte descriptif', 'UPLOAD' => true, 'MAX_FILE' => 1, 'EXTENSIONS' => 'image/*', 'URL' => false],
+    'VID' => ['TYPE' => 'VID', 'DESCRIPTION' => 'Publication de type Video accompagnée d\'un texte descriptif', 'UPLOAD' => true, 'MAX_FILE' => 1, 'EXTENSIONS' => 'video/*', 'URL' => false],
+    'AUD' => ['TYPE' => 'AUD', 'DESCRIPTION' => 'Publication de type Audio accompagnée d\'un texte descriptif', 'UPLOAD' => true, 'MAX_FILE' => 1, 'EXTENSIONS' => '.mp3', 'URL' => false],
   ];
-
 }

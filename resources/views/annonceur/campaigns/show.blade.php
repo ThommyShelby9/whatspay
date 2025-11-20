@@ -348,6 +348,38 @@
                                             </div>
                                         </div>
 
+                                        @php
+                                            use Carbon\Carbon;
+
+                                            $start = isset($viewData['campaign']->startdate)
+                                                ? Carbon::parse($viewData['campaign']->startdate)
+                                                : null;
+                                            $end = isset($viewData['campaign']->enddate)
+                                                ? Carbon::parse($viewData['campaign']->enddate)
+                                                : null;
+
+                                            $days = $start && $end ? max(1, $start->diffInDays($end)) : null;
+                                        @endphp
+
+                                        <div class="mb-4">
+                                            <h6 class="text-muted fw-normal mb-1">Nombre de vues <i
+                                                    class="fa fa-eye text-success me-2"></i></h6>
+                                            <div class=" align-items-center">
+                                                <p class="mb-0 fw-medium">
+                                                    {{ isset($viewData['campaign']->total_views_estimated) ? $viewData['campaign']->total_views_estimated . ' vues totales estimée(s)' : 'N/A' }}
+                                                </p>
+                                                <p class="mb-0 fw-medium">
+                                                    @if ($days && isset($viewData['campaign']->total_views_estimated))
+                                                        {{ $days }} jour(s) |
+                                                        {{ round($viewData['campaign']->total_views_estimated / $days) }}
+                                                        vues en 24h
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </p>
+                                            </div>
+                                        </div>
+
                                         <div class="mb-4">
                                             <h6 class="text-muted fw-normal mb-1">Profession cible <i
                                                     class="fa fa-briefcase text-primary me-2"></i></h6>

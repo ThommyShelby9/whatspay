@@ -70,7 +70,7 @@
                                     <div class="col-md-3">
                                         <div class="form-group mb-3">
                                             <label class="form-label">Catégorie</label>
-                                            <select class="form-select" name="filtre_category">
+                                            <select class="form-select" name="filtre_category[]">
                                                 <option value="">Toutes les catégories</option>
                                                 @foreach ($viewData['categories'] ?? [] as $category)
                                                     <option value="{{ $category->id }}"
@@ -190,11 +190,11 @@
                                                             <i class="fa fa-edit"></i>
                                                         </a>
                                                     @endif
-                                                    <a href="#" class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                                    {{-- <a href="#" class="btn btn-info btn-sm" data-bs-toggle="modal"
                                                         data-bs-target="#assignmentsModal"
                                                         data-campaign-id="{{ $campaign->id }}">
                                                         <i class="fa fa-users"></i>
-                                                    </a>
+                                                    </a> --}}
                                                     @if ($campaign->status == 'PENDING')
                                                         <button class="btn btn-danger btn-sm delete-campaign"
                                                             data-campaign-id="{{ $campaign->id }}">

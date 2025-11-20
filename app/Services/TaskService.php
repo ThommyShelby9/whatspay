@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Consts\Util;
+use App\Models\Assignment;
 use App\Models\Task;
 use App\Models\Category;
 use App\Models\Locality;
 use App\Models\Occupation;
+use App\Models\User;
 use App\Traits\Utils;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -174,6 +177,8 @@ class TaskService
                 'legend' => $taskData['legend'] ?? null,
                 'locality_id' => $primaryLocality,
                 'occupation_id' => $primaryOccupation,
+                'view_price' => $taskData['view_price'],
+                'total_views_estimated' => (int) floor($taskData['budget'] / $taskData['view_price'])
             ];
 
             // Créer la tâche
@@ -261,6 +266,8 @@ class TaskService
                 'budget' => $taskData['budget'] ?? $task->budget,
                 'media_type' => $taskData['media_type'] ?? $task->media_type,
                 'legend' => $taskData['legend'] ?? $task->legend,
+                'view_price' => $taskData['view_price'] ?? $task->view_price,
+                'total_views_estimated' =>  (int) floor($taskData['budget'] / $taskData['view_price']) ?? $task->total_views_estimated
             ];
 
             // URL tracking
@@ -347,33 +354,173 @@ class TaskService
      */
     public function approveTask($id, $validateurId)
     {
-        $result = [
-            'success' => false,
-            'message' => 'Une erreur est survenue lors de l\'approbation de la tâche'
-        ];
+        $task = Task::find($id);
+
+        if (!$task) {
+            return ['success' => false, 'message' => 'Tâche non trouvée'];
+        }
+
+        DB::beginTransaction();
 
         try {
-            $task = Task::find($id);
+            // Récupération des IDs liés
+            $taskLocalities  = $task->localities->pluck('id')->toArray();
+            $taskOccupations = $task->occupations->pluck('id')->toArray();
+            $taskCategories  = $task->categories->pluck('id')->toArray();
 
-            if (!$task) {
-                $result['message'] = 'Tâche non trouvée';
-                return $result;
+            //dd($taskCategories);
+
+            // Diffuseurs correspondant à tous les critères
+            /* $eligible = User::whereHas(
+                'roles',
+                fn($q) =>
+                $q->where('typerole', 'DIFFUSEUR')
+            )
+                ->where('enabled', true)
+                ->whereHas(
+                    'locality',
+                    fn($q) =>
+                    $q->whereIn('id', $taskLocalities)
+                )
+                ->whereHas(
+                    'occupation',
+                    fn($q) =>
+                    $q->whereIn('id', $taskOccupations)
+                )
+                ->whereHas(
+                    'categories',
+                    fn($q) =>
+                    $q->whereIn('category_id', $taskCategories)
+                )
+                ->get(); */
+
+            $eligible = User::whereHas(
+                'roles',
+                fn($q) =>
+                $q->where('typerole', 'DIFFUSEUR')
+            )
+                ->where('enabled', true)
+                ->where(function ($query) use ($taskLocalities, $taskOccupations, $taskCategories) {
+
+                    $query->whereHas(
+                        'locality',
+                        fn($q) =>
+                        $q->whereIn('id', $taskLocalities)
+                    )
+                        ->orWhereHas(
+                            'occupation',
+                            fn($q) =>
+                            $q->whereIn('id', $taskOccupations)
+                        )
+                        ->orWhereHas(
+                            'categories',
+                            fn($q) =>
+                            $q->whereIn('category_id', $taskCategories)
+                        );
+                })
+                ->get();
+
+            //dd($eligible);
+
+            if ($eligible->isEmpty()) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'Aucun diffuseur ne correspond aux critères.'];
             }
 
+            // Exclure diffuseurs avec >= 6 tâches
+            $eligible = $eligible->filter(function ($agent) {
+                return Assignment::where('agent_id', $agent->id)
+                    ->whereIn('status', ['PENDING', 'ASSIGNED'])
+                    ->count() < 6;
+            });
+
+            //dd($eligible);
+
+            if ($eligible->isEmpty()) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'Tous les diffuseurs ont déjà 6 tâches.'];
+            }
+
+            // Calcul nombre de jours (min 1)
+            $days = Carbon::parse($task->startdate)->diffInDays(Carbon::parse($task->enddate));
+            $days = max(1, $days);
+
+            //dd($days);
+
+            // Vues journalières nécessaires
+            $dailyRequired = max(1, floor($task->total_views_estimated / $days));
+
+            //dd($dailyRequired);
+
+            // Préparer agents
+            $agents = $eligible->map(fn($a) => [
+                'model' => $a,
+                'vues'  => $a->vuesmoyen ?? 0
+            ])->toArray();
+
+            //dd($agents);
+
+            // Random Greedy search
+            $finalAgents = [];
+            $attempts = 15;
+
+            while ($attempts--) {
+                shuffle($agents);
+                $sum = 0;
+                $selected = [];
+
+                foreach ($agents as $a) {
+                    if ($sum >= $dailyRequired) break;
+
+                    $sum += $a['vues'];
+                    $selected[] = $a['model'];
+                }
+
+                if ($sum >= $dailyRequired) {
+                    $finalAgents = $selected;
+                    break;
+                }
+            }
+
+            //dd($finalAgents);
+
+            if (empty($finalAgents)) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'Impossible de trouver une combinaison suffisante de diffuseurs.'];
+            }
+
+            // Création des assignments
+            foreach ($finalAgents as $agent) {
+                Assignment::create([
+                    'id' => $this->getId(),
+                    'task_id' => $task->id,
+                    'agent_id' => $agent->id,
+                    'assigner_id' => $validateurId,
+                    'assignment_date' => now(),
+                    'status' => Util::ASSIGNMENTS_STATUSES['ASSIGNED'],
+                    'vues' => 0,
+                    'expected_views' => $agent->vuesmoyen,
+                    'gain' => 0,
+                    'expected_gain' => $agent->vuesmoyen,
+                ]);
+            }
+
+            // Mise à jour tâche
             $task->update([
                 'status' => Util::TASKS_STATUSES["ACCEPTED"],
                 'validation_date' => now(),
-                'validateur_id' => $validateurId
+                'validateur_id' => $validateurId,
             ]);
 
-            $result['success'] = true;
-            $result['message'] = 'Tâche approuvée avec succès';
-        } catch (\Exception $e) {
-            $result['message'] = 'Erreur: ' . $e->getMessage();
-        }
+            DB::commit();
 
-        return $result;
+            return ['success' => true, 'message' => 'Tâche approuvée et assignée avec succès'];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ['success' => false, 'message' => 'Erreur : ' . $e->getMessage()];
+        }
     }
+
 
     /**
      * Rejette une tâche

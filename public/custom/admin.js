@@ -1,8 +1,8 @@
 // Configuration globale CSRF pour jQuery
 $.ajaxSetup({
-    headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-    }
+  headers: {
+    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"),
+  },
 });
 
 let uploadedFiles = [];
@@ -1112,7 +1112,6 @@ if (
   window.location.pathname.startsWith("/admin/task")
 ) {
   $(document).ready(function () {
-    
     // Initialize tooltips
     $('[data-bs-toggle="tooltip"]').tooltip();
 
@@ -1224,6 +1223,20 @@ if (
       $("#deleteTaskForm").attr("action", `/admin/task/${taskId}/delete`);
       $("#deleteTaskModal").modal("show");
     });
+
+    function updateViews() {
+      let budget = parseFloat($("#budget").val());
+      let viewPrice = parseFloat($("#viewPrice").val());
+
+      if (!isNaN(budget) && budget > 0 && !isNaN(viewPrice) && viewPrice > 0) {
+        let views = Math.floor(budget / viewPrice);
+        $("#viewsEstimated").text("Vues estimées : " + views);
+      } else {
+        $("#viewsEstimated").text("Vues estimées : 0");
+      }
+    }
+
+    $("#budget, #viewPrice").on("input", updateViews);
   });
 }
 

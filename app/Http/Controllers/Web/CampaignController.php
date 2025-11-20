@@ -12,6 +12,7 @@ use App\Services\MediaService;
 use App\Traits\Utils;
 use App\Models\Locality;
 use App\Models\Occupation;
+use App\Services\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,19 +26,22 @@ class CampaignController extends Controller
     protected $assignmentService;
     protected $trackingService;
     protected $mediaService;
+    protected $walletService;
 
     public function __construct(
         TaskService $taskService,
         CategoryService $categoryService,
         AssignmentService $assignmentService,
         TrackingService $trackingService,
-        MediaService $mediaService
+        MediaService $mediaService,
+        WalletService $walletService,
     ) {
         $this->taskService = $taskService;
         $this->categoryService = $categoryService;
         $this->assignmentService = $assignmentService;
         $this->trackingService = $trackingService;
         $this->mediaService = $mediaService;
+        $this->walletService = $walletService;
     }
 
     public function index(Request $request)
@@ -206,7 +210,7 @@ class CampaignController extends Controller
 
         // Récupération des données nécessaires pour les sélecteurs
         $viewData["categories"] = $this->categoryService->getAllCategories();
-        $viewData["localities"] = Locality::where('active', true)->orderBy('name')->get();
+        $viewData["localities"] = Locality::where('type', 2)->orderBy('name')->get();
         $viewData["occupations"] = Occupation::where('enabled', true)->orderBy('name')->get();
 
         $this->setViewData($request, $viewData);
@@ -266,6 +270,13 @@ class CampaignController extends Controller
             ]);
         }
 
+        $balance = $this->walletService->getBalance($userId) ?? 0;
+
+        /* if ($balance < $request->budget) {
+            return redirect()->route('announcer.wallet')
+                ->with('type', 'danger')
+                ->with('message', 'Votre solde est insuffisant, veuillez ajouter des fonds !');
+        } */
 
         // Traitement des fichiers uploadés
         $files = [];
@@ -292,7 +303,9 @@ class CampaignController extends Controller
             'localities' => $request->input('localities'),
             'occupations' => $request->input('occupations'),
             'legend' => $request->input('legend'),
+            'view_price' => $request->input('view_price') ?? 3.5
         ];
+
 
         $result = $this->taskService->createTask($taskData);
 
@@ -341,7 +354,7 @@ class CampaignController extends Controller
         $viewData['mediaFiles'] = $mediaFiles;
         $viewData['categories'] = $this->categoryService->getAllCategories();
         $viewData['campaignCategories'] = $this->categoryService->getCategoriesByTask($id);
-        $viewData['localities'] = \App\Models\Locality::where('active', true)->orderBy('name')->get();
+        $viewData['localities'] = \App\Models\Locality::where('type', 2)->orderBy('name')->get();
         $viewData['occupations'] = \App\Models\Occupation::where('enabled', true)->orderBy('name')->get();
 
         $this->setViewData($request, $viewData);
@@ -386,6 +399,14 @@ class CampaignController extends Controller
             'legend' => 'required|string',
         ]);
 
+        $balance = $this->walletService->getBalance($userId) ?? 0;
+
+        /* if ($request->input('budget') && $request->input('budget') !== $campaign->budget && $balance < $request->input('budget')) {
+            return redirect()->route('announcer.wallet')
+                ->with('type', 'danger')
+                ->with('message', 'Votre solde est insuffisant, veuillez ajouter des fonds !');
+        } */
+
         $taskData = [
             'name' => $request->input('name'),
             'descriptipon' => $request->input('descriptipon'),
@@ -399,6 +420,7 @@ class CampaignController extends Controller
             'occupations' => $request->input('occupations') ?? [],
             'legend' => $request->input('legend'),
             'campaign_files' => $request->file('campaign_files'),
+            'view_price' => $request->input('view_price') ?? 3.5
         ];
 
         $result = $this->taskService->updateTask($id, $taskData);

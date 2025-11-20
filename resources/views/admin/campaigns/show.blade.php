@@ -169,6 +169,37 @@
                                                             au {{ \Carbon\Carbon::parse($task->enddate)->format('d/m/Y') }}
                                                         </div>
                                                     </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4 fw-bold">Nombres de vues totales:</div>
+                                                        <div class="col-md-8">
+                                                            {{ $task->total_views_estimated . ' ' . 'vues' ?? 'N/A' }}
+                                                        </div>
+                                                    </div>
+
+                                                    @php
+                                                        use Carbon\Carbon;
+
+                                                        $start = isset($task->startdate)
+                                                            ? Carbon::parse($task->startdate)
+                                                            : null;
+                                                        $end = isset($task->enddate)
+                                                            ? Carbon::parse($task->enddate)
+                                                            : null;
+
+                                                        $days =
+                                                            $start && $end ? max(1, $start->diffInDays($end)) : null;
+                                                    @endphp
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4 fw-bold">Nombres de vues journalier:</div>
+                                                        <div class="col-md-8">
+                                                            @if ($days && isset($task->total_views_estimated))
+                                                                {{ round($task->total_views_estimated / $days) }}
+                                                                vues
+                                                            @else
+                                                                N/A
+                                                            @endif
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <!-- Détails média -->
@@ -363,7 +394,7 @@
                                             <h5 class="card-title mb-0">Diffuseurs assignés</h5>
                                         </div>
                                         <div class="card-body">
-                                            @if (count($assignments ?? []) > 0)
+                                            @if (count($viewData['assignments'] ?? []) > 0)
                                                 <div class="table-responsive">
                                                     <table class="table table-hover">
                                                         <thead>
@@ -378,7 +409,7 @@
                                                         </thead>
 
                                                         <tbody>
-                                                            @foreach ($assignments as $assignment)
+                                                            @foreach ($viewData['assignments'] as $assignment)
                                                                 <tr>
                                                                     <!-- Diffuseur -->
                                                                     <td>
@@ -540,14 +571,31 @@
                                 <input type="text" class="form-control" name="name" value="{{ $task->name }}"
                                     required>
                             </div>
-
                             <div class="col-md-6">
-                                <label class="form-label">Budget (F) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="budget" value="{{ $task->budget }}"
-                                    required>
-                                <small class="text-muted">Minimum 1000F</small>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Montant par vue (F)</label>
+                                            <input type="number" step="0.1" class="form-control" id="viewPrice"
+                                                name="view_price" value="{{ $task->view_price }}" required>
+                                            <small class="text-muted">Par défaut 3.5 F / vue</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Budget (F) <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="budget" name="budget"
+                                                value="{{ $task->budget }}" required>
+                                            <small class="text-muted">Minimum 1000F | <span id="viewsEstimated">Vues
+                                                    estimées : 0</span></small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
 
                         <!-- Dates -->
                         <div class="row mb-3">

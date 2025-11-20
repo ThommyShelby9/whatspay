@@ -61,9 +61,10 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label class="form-label">Budget (F) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="budget"
+                                        <input type="number" class="form-control" id="budgetInput" name="budget"
                                             value="{{ $viewData['campaign']->budget }}" required>
-                                        <small class="text-muted">Minimum 1000F</small>
+                                        <small class="text-muted">Minimum 1000F | <span id="viewsEstimated">0 vue(s)
+                                                estimée(s)</span></small>
                                     </div>
                                 </div>
                             </div>
@@ -442,6 +443,18 @@
                     }
 
                     return true;
+                });
+
+                const viewPrice = 3.5;
+
+                $('#budgetInput').on('input', function() {
+                    const budget = parseFloat($(this).val());
+                    if (!isNaN(budget) && budget >= 0) {
+                        const estimatedViews = Math.floor(budget / viewPrice);
+                        $('#viewsEstimated').text(`${estimatedViews} vue(s) estimée(s)`);
+                    } else {
+                        $('#viewsEstimated').text(`0 vue(s) estimée(s)`);
+                    }
                 });
             });
         </script>

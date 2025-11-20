@@ -30,7 +30,34 @@ class Assignment extends Model
         'submission_date',
         'vues',
         'files',
-        'gain'
+        'gain',
+
+        'expected_views',
+        'expected_gain',
+        'comments'
     ];
 
+    /**
+     * La tâche assignée.
+     */
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
+    }
+
+    /**
+     * L'agent (diffuseur) qui reçoit la tâche.
+     */
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
+
+    /**
+     * L'utilisateur (admin/modérateur) qui a assigné la tâche.
+     */
+    public function assigner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigner_id');
+    }
 }

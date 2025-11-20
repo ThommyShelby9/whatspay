@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\DB;
 class ProfileController extends Controller
 {
     use Utils;
-    
+
     protected $userService;
     protected $categoryService;
-    
+
     public function __construct(
         UserService $userService,
         CategoryService $categoryService
@@ -24,51 +24,50 @@ class ProfileController extends Controller
         $this->userService = $userService;
         $this->categoryService = $categoryService;
     }
-    
+
     public function index(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer l'objet utilisateur complet avec toutes les relations
         $user = $this->userService->getUserById($userId);
-        
+
         // Si l'utilisateur est trouvé
         if ($user) {
             // Stocker l'objet utilisateur complet
             $viewData["userObject"] = $user;
-            
+
             // Récupérer la liste des pays directement de la base de données
             $viewData["countries"] = DB::table('countries')
                 ->select('id', 'name')
                 ->where('enabled', true)
                 ->orderBy('name')
                 ->get();
-                
+
             // Récupérer la liste des localités directement de la base de données
             // Correction: utiliser "active" au lieu de "enabled" pour les localités
             $viewData["localities"] = DB::table('localities')
                 ->select('id', 'name')
-                ->where('active', true)
+                ->where('type', 2)
                 ->orderBy('name')
                 ->get();
-                
         } else {
             // Si l'utilisateur n'est pas trouvé, rediriger vers la page de connexion
             return redirect()->route('admin.login')
                 ->with('type', 'danger')
                 ->with('message', 'Utilisateur non trouvé. Veuillez vous reconnecter.');
         }
-        
+
         $viewData["categories"] = $this->categoryService->getAllCategories();
         $viewData["userCategories"] = $this->userService->getUserCategories($userId);
         $viewData["assignmentStats"] = $this->userService->getAssignmentStats($userId);
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('influencer.profile.index', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -78,11 +77,11 @@ class ProfileController extends Controller
             'pagecardtilte' => 'Informations personnelles'
         ]);
     }
-    
+
     public function update(Request $request)
     {
         $userId = $request->session()->get('userid');
-        
+
         // Valider les données soumises
         $request->validate([
             'firstname' => 'required|string|max:255',
@@ -96,7 +95,7 @@ class ProfileController extends Controller
             'tiktok' => 'nullable|string',
             'youtube' => 'nullable|string',
         ]);
-        
+
         $userData = [
             'firstname' => $request->input('firstname'),
             'lastname' => $request->input('lastname'),
@@ -109,9 +108,9 @@ class ProfileController extends Controller
             'tiktok' => $request->input('tiktok'),
             'youtube' => $request->input('youtube'),
         ];
-        
+
         $result = $this->userService->updateUser($userId, $userData);
-        
+
         if ($result['success']) {
             return redirect()->route('influencer.profile')
                 ->with('type', 'success')
@@ -122,7 +121,7 @@ class ProfileController extends Controller
                 ->with('message', $result['message']);
         }
     }
-    
+
     private function setAlert(Request &$request, &$alert)
     {
         $alert = [
