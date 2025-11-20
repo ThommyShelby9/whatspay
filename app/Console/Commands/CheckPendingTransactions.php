@@ -149,44 +149,63 @@ class CheckPendingTransactions extends Command
                     }
 
                 } else {
-                    // Impossible de vérifier
-                    $this->warn("  ⚠️  Impossible de vérifier: " . ($statusCheck['message'] ?? 'Erreur inconnue'));
+                    // Impossible de vérifier le statut avec PayPlus API
+                    $this->warn("  ⚠️  Impossible de vérifier avec API PayPlus");
 
-                    // Si la transaction a response_code = '00' dans gateway_response, la traiter quand même
+                    // MAIS si la transaction a response_code = '00', c'est qu'elle a été acceptée
+                    // On la traite automatiquement
                     $gatewayResponse = json_decode($transaction->gateway_response, true);
+
                     if (isset($gatewayResponse['response_code']) && $gatewayResponse['response_code'] === '00') {
-                        $this->info("  → Response code '00' détecté, traitement forcé...");
+                        // Transaction acceptée par PayPlus (code 00), mais callback pas reçu
+                        // On va la traiter automatiquement si elle a > 10 minutes
+                        $ageMinutes = $transaction->created_at->diffInMinutes(Carbon::now());
 
-                        $payload = json_decode($transaction->payload, true);
-                        $type = $payload['type'] ?? 'deposit';
+                        if ($ageMinutes >= 10) {
+                            $this->info("  → Response code '00' + {$ageMinutes} min → Traitement automatique");
 
-                        $callbackData = [
-                            'response_code' => '00',
-                            'description' => 'completed',
-                            'transaction_id' => $transaction->reference,
-                            'amount' => abs($transaction->amount),
-                            'currency' => $transaction->currency,
-                            'auto_checked' => true,
-                            'forced' => true,
-                            'checked_at' => Carbon::now()->toDateTimeString()
-                        ];
+                            $payload = json_decode($transaction->payload, true);
+                            $type = $payload['type'] ?? 'deposit';
 
-                        if ($type === 'withdrawal') {
-                            $success = $this->paymentService->processWithdrawalCallback($transaction->id, $callbackData);
+                            $callbackData = [
+                                'response_code' => '00',
+                                'description' => 'completed',
+                                'transaction_id' => $transaction->reference,
+                                'amount' => abs($transaction->amount),
+                                'currency' => $transaction->currency,
+                                'auto_checked' => true,
+                                'forced' => true,
+                                'reason' => 'response_code_00_but_no_callback_after_10min',
+                                'checked_at' => Carbon::now()->toDateTimeString()
+                            ];
+
+                            if ($type === 'withdrawal') {
+                                $success = $this->paymentService->processWithdrawalCallback($transaction->id, $callbackData);
+                            } else {
+                                $success = $this->paymentService->processDepositCallback($transaction->id, $callbackData);
+                            }
+
+                            if ($success) {
+                                $this->info("  ✓ Wallet crédité automatiquement\n");
+                                $stats['completed']++;
+
+                                Log::info('Auto-completed transaction with response_code 00', [
+                                    'transaction_id' => $transaction->id,
+                                    'age_minutes' => $ageMinutes,
+                                    'type' => $type
+                                ]);
+                            } else {
+                                $this->error("  ✗ Échec du traitement\n");
+                                $stats['errors']++;
+                            }
                         } else {
-                            $success = $this->paymentService->processDepositCallback($transaction->id, $callbackData);
-                        }
-
-                        if ($success) {
-                            $this->info("  ✓ Transaction traitée avec succès\n");
-                            $stats['completed']++;
-                        } else {
-                            $this->error("  ✗ Échec du traitement\n");
-                            $stats['errors']++;
+                            $this->line("  → Âge: {$ageMinutes} min (attente 10 min avant auto-traitement)\n");
+                            $stats['still_pending']++;
                         }
                     } else {
+                        // Pas de response_code = '00', vraiment en attente
+                        $this->line("  → Vraiment en attente (pas de response_code 00)\n");
                         $stats['still_pending']++;
-                        $this->line("");
                     }
                 }
 
