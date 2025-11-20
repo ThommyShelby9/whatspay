@@ -229,12 +229,9 @@ class EarningController extends Controller
             
             // Traitement selon la méthode de retrait
             if ($request->input('withdrawal_method') === 'mobile_money') {
-                // Nettoyer le numéro de téléphone
+                // Nettoyer le numéro de téléphone (le PaymentService se chargera du formatage avec 229)
                 $phone = preg_replace('/[^0-9]/', '', $request->input('phone'));
-                if (!str_starts_with($phone, '225')) {
-                    $phone = '225' . $phone;
-                }
-                
+
                 // Initier le retrait via PayPlus
                 $result = $this->paymentService->initiateWithdrawal(
                     $userId,
