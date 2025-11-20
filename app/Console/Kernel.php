@@ -45,6 +45,11 @@ class Kernel extends ConsoleKernel
         // Run every 30 minutes to catch assignments at the ~23.5 hour mark
         $schedule->command('whatspay:send-screenshot-reminders')
             ->everyThirtyMinutes();
+
+        // ✅ NOUVEAU: Vérifier les transactions en attente toutes les 5 minutes
+        $schedule->command('payments:check-pending')
+            ->everyFiveMinutes()
+            ->appendOutputTo(storage_path('logs/check-pending-transactions.log'));
     }
 
 
