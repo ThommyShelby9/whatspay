@@ -177,7 +177,7 @@
         @endif
 
         <!-- Graphique des gains -->
-        <div class="row mb-4">
+        {{-- <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -202,7 +202,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
         <!-- Historique des transactions -->
         <div class="row">

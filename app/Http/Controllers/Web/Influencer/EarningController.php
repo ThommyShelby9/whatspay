@@ -16,11 +16,11 @@ use Carbon\Carbon;
 class EarningController extends Controller
 {
     use Utils;
-    
+
     protected $assignmentService;
     protected $walletService;
     protected $paymentService;
-    
+
     public function __construct(
         AssignmentService $assignmentService,
         WalletService $walletService,
@@ -30,15 +30,15 @@ class EarningController extends Controller
         $this->walletService = $walletService;
         $this->paymentService = $paymentService;
     }
-    
+
     public function index(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les statistiques de gains
         try {
             $earningsStats = $this->assignmentService->getAgentEarningsStats($userId);
@@ -50,11 +50,11 @@ class EarningController extends Controller
                 'monthly_average' => 0
             ];
         }
-        
+
         // Ajouter le solde du wallet et les paiements en attente
         $viewData['balance'] = $this->walletService->getBalance($userId);
         $pendingEarnings = $this->calculatePendingEarnings($userId);
-        
+
         $viewData["earningsStats"] = [
             'total_earnings' => $earningsStats['total_gain'],
             'current_month' => $earningsStats['this_month'],
@@ -63,13 +63,14 @@ class EarningController extends Controller
             'pending_payment' => $pendingEarnings,
             'available_for_withdrawal' => $viewData['balance']
         ];
-        
+
+
         // Récupérer l'historique des transactions de gains
         $viewData['earningsHistory'] = $this->getEarningsHistory($userId);
-        
+
         // Récupérer les données pour le graphique (12 derniers mois)
         $viewData['chartData'] = $this->getChartData($userId);
-        
+
         // Récupérer les statistiques d'assignments
         try {
             $viewData['assignmentStats'] = $this->assignmentService->getAgentAssignmentStats($userId);
@@ -80,12 +81,12 @@ class EarningController extends Controller
                 'pending' => 0
             ];
         }
-        
+
         // Calculer les prochaines dates de paiement
         $viewData['nextPaymentDate'] = $this->getNextPaymentDate();
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('influencer.earnings.index', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -95,14 +96,14 @@ class EarningController extends Controller
             'pagecardtilte' => 'Historique des revenus'
         ]);
     }
-    
+
     /**
      * Récupérer les données pour le graphique des gains (PostgreSQL compatible)
      */
     public function getChartData($userId, $period = '12months')
     {
         $endDate = Carbon::now();
-        
+
         switch ($period) {
             case '6months':
                 $startDate = $endDate->copy()->subMonths(6);
@@ -120,7 +121,7 @@ class EarningController extends Controller
                 $startDate = $endDate->copy()->subYear();
                 $format = 'Y-m';
         }
-        
+
         try {
             // Requête PostgreSQL compatible avec TO_CHAR au lieu de DATE_FORMAT
             $earnings = DB::table('assignments')
@@ -134,34 +135,34 @@ class EarningController extends Controller
                 ->get();
         } catch (\Exception $e) {
             \Log::error('Chart data error: ' . $e->getMessage());
-            
+
             // Fallback avec des données vides en cas d'erreur
             $earnings = collect([]);
         }
-        
+
         // Préparer les données pour le graphique
         $categories = [];
         $data = [];
-        
+
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $monthKey = $current->format($format);
             $monthLabel = $current->format('M Y');
-            
+
             $categories[] = $monthLabel;
-            
+
             $monthEarnings = $earnings->firstWhere('month', $monthKey);
             $data[] = $monthEarnings ? (float)$monthEarnings->total_gain : 0;
-            
+
             $current->addMonth();
         }
-        
+
         return [
             'categories' => $categories,
             'data' => $data
         ];
     }
-    
+
     /**
      * API endpoint pour les données du graphique
      */
@@ -169,18 +170,17 @@ class EarningController extends Controller
     {
         $userId = $request->session()->get('userid');
         $period = $request->get('period', '12months');
-        
+
         try {
             $chartData = $this->getChartData($userId, $period);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $chartData
             ]);
-            
         } catch (\Exception $e) {
             \Log::error('API Chart data error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la récupération des données',
@@ -191,7 +191,7 @@ class EarningController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Traiter une demande de retrait
      */
@@ -199,7 +199,7 @@ class EarningController extends Controller
     {
         try {
             $userId = $request->session()->get('userid');
-            
+
             // Validation des données
             $request->validate([
                 'amount' => 'required|numeric|min:500|max:500000',
@@ -215,10 +215,10 @@ class EarningController extends Controller
                 'bank_account.required_if' => 'Le numéro de compte est requis',
                 'bank_name.required_if' => 'Le nom de la banque est requis',
             ]);
-            
+
             $amount = $request->input('amount');
             $balance = $this->walletService->getBalance($userId);
-            
+
             // Vérifier le solde disponible
             if ($balance < $amount) {
                 return response()->json([
@@ -226,7 +226,7 @@ class EarningController extends Controller
                     'message' => 'Solde insuffisant. Solde disponible : ' . number_format($balance, 0, ',', ' ') . ' FCFA'
                 ]);
             }
-            
+
             // Traitement selon la méthode de retrait
             if ($request->input('withdrawal_method') === 'mobile_money') {
                 // Nettoyer le numéro de téléphone (le PaymentService se chargera du formatage avec 229)
@@ -239,12 +239,11 @@ class EarningController extends Controller
                     $phone,
                     false
                 );
-                
             } else {
                 // Pour les retraits bancaires, créer une demande manuelle
                 $result = $this->createBankWithdrawalRequest($userId, $amount, $request->all());
             }
-            
+
             if ($result['success']) {
                 return response()->json([
                     'success' => true,
@@ -257,24 +256,22 @@ class EarningController extends Controller
                     'message' => $result['message']
                 ]);
             }
-            
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Données invalides',
                 'errors' => $e->errors()
             ], 422);
-            
         } catch (\Exception $e) {
             \Log::error('Withdrawal error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue. Veuillez réessayer.'
             ], 500);
         }
     }
-    
+
     /**
      * Calculer les gains en attente de paiement
      */
@@ -293,7 +290,7 @@ class EarningController extends Controller
             return 0;
         }
     }
-    
+
     /**
      * Récupérer l'historique des transactions de gains
      */
@@ -301,7 +298,7 @@ class EarningController extends Controller
     {
         return $this->walletService->getTransactions($userId, 20);
     }
-    
+
     /**
      * Calculer la prochaine date de paiement
      */
@@ -310,7 +307,7 @@ class EarningController extends Controller
         $tomorrow = Carbon::tomorrow()->setTime(2, 0);
         return $tomorrow;
     }
-    
+
     /**
      * Créer une demande de retrait bancaire
      */
@@ -318,7 +315,7 @@ class EarningController extends Controller
     {
         try {
             $transactionId = $this->getId();
-            
+
             \App\Models\PaymentTransaction::create([
                 'id' => $transactionId,
                 'user_id' => $userId,
@@ -334,14 +331,14 @@ class EarningController extends Controller
                     'amount' => $amount
                 ])
             ]);
-            
+
             // Déduire temporairement les fonds
             $deductResult = $this->walletService->deductFunds(
                 $userId,
                 $amount,
                 'Demande de retrait bancaire - ' . $bankData['bank_name']
             );
-            
+
             if ($deductResult['success']) {
                 return [
                     'success' => true,
@@ -351,17 +348,16 @@ class EarningController extends Controller
             } else {
                 return $deductResult;
             }
-            
         } catch (\Exception $e) {
             \Log::error('Bank withdrawal request error: ' . $e->getMessage());
-            
+
             return [
                 'success' => false,
                 'message' => 'Erreur lors de la création de la demande de retrait'
             ];
         }
     }
-    
+
     /**
      * Exporter les données de gains
      */
@@ -370,10 +366,10 @@ class EarningController extends Controller
         $userId = $request->session()->get('userid');
         $format = $request->get('format', 'csv');
         $period = $request->get('period', 'all');
-        
+
         try {
             $data = $this->getExportData($userId, $period);
-            
+
             if ($format === 'csv') {
                 return $this->exportToCsv($data);
             } else {
@@ -381,17 +377,16 @@ class EarningController extends Controller
                     'message' => 'Export PDF en cours de développement'
                 ], 501);
             }
-            
         } catch (\Exception $e) {
             \Log::error('Export error: ' . $e->getMessage());
-            
+
             return redirect()->back()->with([
                 'type' => 'danger',
                 'message' => 'Erreur lors de l\'exportation des données'
             ]);
         }
     }
-    
+
     /**
      * Récupérer les données pour l'export
      */
@@ -411,7 +406,7 @@ class EarningController extends Controller
                 ->where('assignments.status', \App\Consts\Util::ASSIGNMENTS_STATUSES['PAID'])
                 ->whereNotNull('assignments.payment_date')
                 ->orderBy('assignments.payment_date', 'desc');
-                
+
             // Appliquer les filtres de période
             if ($period !== 'all') {
                 $endDate = Carbon::now();
@@ -428,36 +423,35 @@ class EarningController extends Controller
                     default:
                         $startDate = $endDate->copy()->subMonths(6);
                 }
-                
+
                 $query->whereBetween('assignments.payment_date', [$startDate, $endDate]);
             }
-            
+
             return $query->get();
-            
         } catch (\Exception $e) {
             \Log::error('Export data error: ' . $e->getMessage());
             return collect([]);
         }
     }
-    
+
     /**
      * Exporter en CSV
      */
     private function exportToCsv($data)
     {
         $filename = 'gains-' . date('Y-m-d') . '.csv';
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
-        
-        return response()->stream(function() use ($data) {
+
+        return response()->stream(function () use ($data) {
             $file = fopen('php://output', 'w');
-            
+
             // En-têtes CSV
             fputcsv($file, ['Date', 'Campagne', 'Vues', 'Gains (FCFA)', 'Statut']);
-            
+
             foreach ($data as $row) {
                 fputcsv($file, [
                     date('d/m/Y', strtotime($row->payment_date)),
@@ -467,11 +461,11 @@ class EarningController extends Controller
                     'Payé'
                 ]);
             }
-            
+
             fclose($file);
         }, 200, $headers);
     }
-    
+
     private function setAlert(Request &$request, &$alert)
     {
         $alert = [
