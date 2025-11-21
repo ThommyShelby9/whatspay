@@ -30,6 +30,7 @@ class WalletController extends Controller
         $this->campaignBudgetService = $campaignBudgetService;
     }
 
+
     public function index(Request $request)
     {
         $viewData = [];

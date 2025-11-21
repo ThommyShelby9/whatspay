@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Route;
 
 // PayPlus callback routes (public, no authentication required)
 Route::prefix('payment')->group(function () {
-    // Deposit callbacks
-    Route::post('callback/{transaction}', [PaymentCallbackController::class, 'handleDepositCallback'])
+    // Deposit callbacks (accepter GET et POST pour compatibilité)
+    Route::match(['get', 'post'], 'callback/{transaction}', [PaymentCallbackController::class, 'handleDepositCallback'])
         ->name('payment.callback');
-    
-    // Withdrawal callbacks
-    Route::post('callback/withdrawal/{transaction}', [PaymentCallbackController::class, 'handleWithdrawalCallback'])
+
+    // Withdrawal callbacks (accepter GET et POST pour compatibilité)
+    Route::match(['get', 'post'], 'callback/withdrawal/{transaction}', [PaymentCallbackController::class, 'handleWithdrawalCallback'])
         ->name('payment.callback.withdrawal');
     
     // Payment gateway simulation pages (for testing)
@@ -34,6 +34,17 @@ Route::prefix('payment')->group(function () {
     // Status check endpoint
     Route::get('status/{transaction}', [PaymentCallbackController::class, 'checkStatus'])
         ->name('payment.status');
+
+    // ✅ NOUVEAU: Endpoint de test pour vérifier que PayPlus peut joindre le serveur
+    Route::get('callback/test', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Callback endpoint accessible',
+            'timestamp' => now()->toDateTimeString(),
+            'server' => request()->server('SERVER_NAME'),
+            'ip' => request()->ip()
+        ]);
+    })->name('payment.callback.test');
 });
 
 // Protected payment routes
