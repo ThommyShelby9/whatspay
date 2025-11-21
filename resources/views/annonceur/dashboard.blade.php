@@ -362,7 +362,7 @@
                                                 @elseif($task->status == 'REJECTED')
                                                     <span class="badge bg-danger">Rejetée</span>
                                                 @elseif($task->status == 'CLOSED')
-                                                    <span class="badge bg-secondary">Fermée</span>
+                                                    <span class="badge bg-secondary">Clôturée</span>
                                                 @else
                                                     <span class="badge bg-secondary">{{ $task->status }}</span>
                                                 @endif

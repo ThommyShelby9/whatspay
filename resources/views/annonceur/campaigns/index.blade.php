@@ -173,7 +173,7 @@
                                                 @elseif($campaign->status == 'REJECTED')
                                                     <span class="badge bg-danger">Rejetée</span>
                                                 @elseif($campaign->status == 'CLOSED')
-                                                    <span class="badge bg-secondary">Fermée</span>
+                                                    <span class="badge bg-secondary">Clôturée</span>
                                                 @else
                                                     <span class="badge bg-secondary">{{ $campaign->status }}</span>
                                                 @endif

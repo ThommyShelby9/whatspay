@@ -70,6 +70,10 @@
                                         <span class="badge bg-primary">Disponible</span>
                                     @elseif(($viewData['assignment']->status ?? '') == 'SUBMITED')
                                         <span class="badge bg-success">Terminée</span>
+                                    @elseif($viewData['assignment']->status == 'SUBMISSION_ACCEPTED')
+                                        <span class="badge bg-success">Résultat validé</span>
+                                    @elseif($viewData['assignment']->status == 'SUBMISSION_REJECTED')
+                                        <span class="badge bg-danger">Résultat rejeté</span>
                                     @elseif(($viewData['assignment']->status ?? '') == 'REJECTED')
                                         <span class="badge bg-danger">Rejetée</span>
                                     @else
@@ -113,7 +117,7 @@
                             <p>{{ $viewData['assignment']->task->descriptipon ?? 'Aucune description disponible' }}</p>
                         </div>
 
-                        @if ($viewData['assignment']->status == 'PENDING')
+                        @if ($viewData['assignment']->status !== 'ASSIGNED')
                             <div class="mb-4">
                                 <h6 class="text-muted mb-1">Instructions</h6>
                                 <div class="alert alert-info">
@@ -196,7 +200,11 @@
                                 $progress = 25;
                             } elseif ($viewData['assignment']->status == 'PENDING') {
                                 $progress = 50;
-                            } elseif ($viewData['assignment']->status == 'SUBMITED') {
+                            } elseif (
+                                $viewData['assignment']->status == 'SUBMITED' ||
+                                $viewData['assignment']->status == 'SUBMISSION_ACCEPTED' ||
+                                $viewData['assignment']->status == 'SUBMISSION_REJECTED'
+                            ) {
                                 $progress = 100;
                             }
                         @endphp

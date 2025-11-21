@@ -12,10 +12,10 @@ use Illuminate\Http\Request;
 class DashboardController extends Controller
 {
     use Utils;
-    
+
     protected $taskService;
     protected $assignmentService;
-    
+
     public function __construct(
         TaskService $taskService,
         AssignmentService $assignmentService
@@ -23,22 +23,22 @@ class DashboardController extends Controller
         $this->taskService = $taskService;
         $this->assignmentService = $assignmentService;
     }
-    
+
     public function index(Request $request)
     {
         $viewData = [];
         $alert = [];
         $this->setAlert($request, $alert);
-        
+
         $userId = $request->session()->get('userid');
-        
+
         // Récupérer les statistiques
         $viewData["assignmentStats"] = $this->assignmentService->getAgentAssignmentStats($userId);
         $viewData["recentAssignments"] = $this->assignmentService->getRecentAgentAssignments($userId, 5);
         $viewData["earningsStats"] = $this->assignmentService->getAgentEarningsStats($userId);
-        
+
         $this->setViewData($request, $viewData);
-        
+
         return view('influencer.dashboard.index', [
             'alert' => $alert,
             'viewData' => $viewData,
@@ -48,7 +48,7 @@ class DashboardController extends Controller
             'pagecardtilte' => 'Bienvenue sur votre espace diffuseur'
         ]);
     }
-    
+
     private function setAlert(Request &$request, &$alert)
     {
         $alert = [

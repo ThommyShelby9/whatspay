@@ -16,7 +16,7 @@
                         </div>
                         <div class="col-auto">
                             <a href="{{ route('admin.tasks') }}" class="btn btn-primary">
-                                <i class="fas fa-plus-circle me-2"></i>Nouvelle Campagne
+                                <i class="fa fa-plus-circle me-2"></i>Nouvelle Campagne
                             </a>
                         </div>
                     </div>
@@ -31,7 +31,7 @@
                     <div class="card-body bg-primary-subtle rounded">
                         <div class="row align-items-center">
                             <div class="col-4 text-center">
-                                <i class="fas fa-users text-primary fa-3x"></i>
+                                <i class="fa fa-user text-primary fa-3x"></i>
                             </div>
                             <div class="col-8">
                                 <h3 class="font-weight-bold mb-0">{{ $viewData['userStats']['total'] ?? 0 }}</h3>
@@ -46,7 +46,7 @@
                     <div class="card-body bg-success-subtle rounded">
                         <div class="row align-items-center">
                             <div class="col-4 text-center">
-                                <i class="fas fa-tasks text-success fa-3x"></i>
+                                <i class="fa fa-tasks text-success fa-3x"></i>
                             </div>
                             <div class="col-8">
                                 <h3 class="font-weight-bold mb-0">{{ $viewData['taskStats']['total'] ?? 0 }}</h3>
@@ -61,7 +61,7 @@
                     <div class="card-body bg-info-subtle rounded">
                         <div class="row align-items-center">
                             <div class="col-4 text-center">
-                                <i class="fas fa-eye text-info fa-3x"></i>
+                                <i class="fa fa-eye text-info fa-3x"></i>
                             </div>
                             <div class="col-8">
                                 <h3 class="font-weight-bold mb-0">
@@ -77,7 +77,7 @@
                     <div class="card-body bg-warning-subtle rounded">
                         <div class="row align-items-center">
                             <div class="col-4 text-center">
-                                <i class="fas fa-money-bill-wave text-warning fa-3x"></i>
+                                <i class="fa fa-money text-warning fa-3x"></i>
                             </div>
                             <div class="col-8">
                                 <h3 class="font-weight-bold mb-0">
@@ -170,21 +170,21 @@
                         <div class="mt-4">
                             <div class="d-flex justify-content-between mb-2">
                                 <div>
-                                    <i class="fas fa-circle text-primary me-2"></i>
+                                    <i class="fa fa-circle text-primary me-2"></i>
                                     <span class="text-muted">Diffuseurs</span>
                                 </div>
                                 <span class="text-dark">{{ $viewData['userStats']['influencers'] ?? 0 }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <div>
-                                    <i class="fas fa-circle text-success me-2"></i>
+                                    <i class="fa fa-circle text-success me-2"></i>
                                     <span class="text-muted">Annonceurs</span>
                                 </div>
                                 <span class="text-dark">{{ $viewData['userStats']['announcers'] ?? 0 }}</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <i class="fas fa-circle text-danger me-2"></i>
+                                    <i class="fa fa-circle text-danger me-2"></i>
                                     <span class="text-muted">Administrateurs</span>
                                 </div>
                                 <span class="text-dark">{{ $viewData['userStats']['admins'] ?? 0 }}</span>
@@ -233,6 +233,8 @@
                                                         <span class="badge bg-success">Payée</span>
                                                     @elseif($task->status == 'REJECTED')
                                                         <span class="badge bg-danger">Rejetée</span>
+                                                    @elseif($task->status == 'CLOSED')
+                                                        <span class="badge bg-secondary">Clôturée</span>
                                                     @else
                                                         <span class="badge bg-secondary">{{ $task->status }}</span>
                                                     @endif
@@ -311,7 +313,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="icon-box bg-primary-subtle rounded p-3 me-3">
-                                <i class="fas fa-users text-primary fa-2x"></i>
+                                <i class="fa fa-user text-primary fa-2x"></i>
                             </div>
                             <div>
                                 <h5 class="card-title mb-1">Gestion des Utilisateurs</h5>
@@ -331,7 +333,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="icon-box bg-success-subtle rounded p-3 me-3">
-                                <i class="fas fa-tasks text-success fa-2x"></i>
+                                <i class="fa fa-tasks text-success fa-2x"></i>
                             </div>
                             <div>
                                 <h5 class="card-title mb-1">Gestion des Campagnes</h5>
@@ -350,7 +352,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="icon-box bg-info-subtle rounded p-3 me-3">
-                                <i class="fab fa-whatsapp text-info fa-2x"></i>
+                                <i class="fa fa-whatsapp text-info fa-2x"></i>
                             </div>
                             <div>
                                 <h5 class="card-title mb-1">WhatsApp</h5>

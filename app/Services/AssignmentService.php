@@ -259,43 +259,81 @@ class AssignmentService
         return $result;
     }
 
+    public function validate($assignment, $request)
+    {
+        if ($request->has('vues')) {
+
+            $request->validate([
+                'vues' => 'required|integer|min:0',
+            ]);
+
+            $assignment->vues = $request->vues;
+            $assignment->gain = $request->vues;
+            $assignment->save();
+
+            return [
+                "success" => true,
+                "message" => "Nombre de vues mis à jour avec succès."
+            ];
+        }
+
+        $agent = $assignment->agent;
+
+        if (!$agent) {
+            return [
+                "success" => false,
+                "message" => "Impossible de valider : agent introuvable."
+            ];
+        }
+
+        // Mettre le statut SUBMISSION_VALIDATE
+        $assignment->status = Util::ASSIGNMENTS_STATUSES['SUBMISSION_ACCEPTED'];
+        $assignment->save();
+
+        // Calcul du gain à créditer
+        $gain = $assignment->gain ?? 0;
+
+        // Créditer l’agent
+        /* $agent->wallet->credit($gain);
+        $agent->save(); */
+
+        return [
+            "success" => true,
+            "message" => "Résultat validé et gain crédité à l'agent."
+        ];
+    }
+
     public function getAvailableAgentsForTask($taskId, $filters = [])
     {
-        $maxAssignments = !empty($filters['max_assignments']) ? $filters['max_assignments'] : 3;
+        $maxAssignments = $filters['max_assignments'] ?? 6;
 
-        $query = User::select([
-            'users.*',
-            DB::raw('COUNT(assignments.id) as active_assignments')
-        ])
-            ->leftJoin('role_user', 'users.id', '=', 'role_user.user_id')
-            ->leftJoin('roles', 'role_user.role_id', '=', 'roles.id')
-            ->leftJoin('assignments', function ($join) {
-                $join->on('users.id', '=', 'assignments.agent_id')
-                    ->where('assignments.status', '!=', 'COMPLETED');
-            })
-            ->where('roles.typerole', 'DIFFUSEUR')
-            ->where('users.enabled', true)
-            ->groupBy('users.id');
+        $query = User::whereHas('roles', function ($q) {
+            $q->where('typerole', 'DIFFUSEUR');
+        })
+            ->where('enabled', true)
+            ->withCount(['assignments as active_assignments' => function ($q) {
+                $q->where('status', '!=', 'SUBMITED');
+            }]);
 
+        // Filtre par catégorie si défini
         if (!empty($filters['category_id'])) {
-            $query->whereIn('users.id', function ($subquery) use ($filters) {
-                $subquery->select('user_id')
-                    ->from('category_user')
-                    ->where('category_id', $filters['category_id']);
+            $query->whereHas('categories', function ($q) use ($filters) {
+                $q->where('category_id', $filters['category_id']);
             });
         }
 
-        return $query->havingRaw('COUNT(assignments.id) < ?', [$maxAssignments])
+        return $query->having('active_assignments', '<', $maxAssignments)
             ->orderBy('active_assignments', 'asc')
             ->get();
     }
+
 
     public function getAssignmentStats()
     {
         return [
             'total' => Assignment::count(),
             'pending' => Assignment::where('status', 'PENDING')->count(),
-            'completed' => Assignment::where('status', 'COMPLETED')->count(),
+            'completed' => Assignment::where('status', 'SUBMITED')->orWhere('status', 'SUBMISSION_ACCEPTED')->count(),
             'total_vues' => Assignment::sum('vues'),
             'total_gain' => Assignment::sum('gain'),
         ];
@@ -309,7 +347,8 @@ class AssignmentService
                 ->where('status', 'PENDING')
                 ->count(),
             'completed' => Assignment::where('agent_id', $agentId)
-                ->where('status', 'COMPLETED')
+                ->where('status', 'SUBMITED')
+                ->orWhere('status', 'SUBMISSION_ACCEPTED')
                 ->count(),
             'total_vues' => Assignment::where('agent_id', $agentId)
                 ->sum('vues'),
@@ -320,55 +359,53 @@ class AssignmentService
 
     public function getRecentAgentAssignments($agentId, $limit = 5)
     {
-        return Assignment::select([
-            'assignments.*',
-            'tasks.name as task_name'
-        ])
-            ->join('tasks', 'assignments.task_id', '=', 'tasks.id')
-            ->where('assignments.agent_id', $agentId)
-            ->orderBy('assignments.created_at', 'desc')
-            ->limit($limit)
-            ->get();
+        return Assignment::with('task')      // eager load la relation task
+            ->where('agent_id', $agentId)
+            ->orderBy('created_at', 'desc')
+            ->take($limit)
+            ->get()
+            ->map(function ($assignment) {
+                // ajouter task_name pour compatibilité avec l'ancien code
+                $assignment->task_name = $assignment->task->name ?? null;
+                return $assignment;
+            });
     }
 
     public function getAgentEarningsStats($agentId)
     {
-        // Récupérer le total des gains
         $totalGain = Assignment::where('agent_id', $agentId)->sum('gain');
 
-        // Récupérer les gains du mois en cours
         $currentMonth = Carbon::now();
+
         $thisMonthGain = Assignment::where('agent_id', $agentId)
             ->whereYear('submission_date', $currentMonth->year)
             ->whereMonth('submission_date', $currentMonth->month)
             ->sum('gain');
 
-        // Récupérer les gains du mois précédent
         $lastMonth = Carbon::now()->subMonth();
+
         $lastMonthGain = Assignment::where('agent_id', $agentId)
             ->whereYear('submission_date', $lastMonth->year)
             ->whereMonth('submission_date', $lastMonth->month)
             ->sum('gain');
 
-        // Calculer la moyenne mensuelle
-        $monthlyAverage = DB::table(DB::raw('(
-                SELECT 
-                    EXTRACT(YEAR FROM submission_date) as year,
-                    EXTRACT(MONTH FROM submission_date) as month,
-                    SUM(gain) as monthly_gain
-                FROM assignments
-                WHERE agent_id = :agent_id AND submission_date IS NOT NULL
-                GROUP BY year, month
-            ) as monthly_gains'))
-            ->selectRaw('AVG(monthly_gain) as average')
-            ->setBindings(['agent_id' => $agentId])
-            ->first();
+        $monthlyGains = Assignment::where('agent_id', $agentId)
+            ->whereNotNull('submission_date')
+            ->select(
+                DB::raw('EXTRACT(YEAR FROM submission_date) AS year'),
+                DB::raw('EXTRACT(MONTH FROM submission_date) AS month'),
+                DB::raw('SUM(gain) AS monthly_gain')
+            )
+            ->groupBy('year', 'month')
+            ->get();
+
+        $monthlyAverage = $monthlyGains->avg('monthly_gain');
 
         return [
             'total_gain' => $totalGain,
             'this_month' => $thisMonthGain,
             'last_month' => $lastMonthGain,
-            'monthly_average' => $monthlyAverage ? $monthlyAverage->average : 0,
+            'monthly_average' => $monthlyAverage ?? 0,
         ];
     }
 
@@ -382,7 +419,6 @@ class AssignmentService
     {
         // Vérifier si la colonne task_id existe réellement
         if (!Schema::hasColumn('assignments', 'task_id')) {
-            // Retourner des statistiques par défaut si la colonne n'existe pas
             return [
                 'total' => 0,
                 'pending' => 0,
@@ -395,64 +431,63 @@ class AssignmentService
             ];
         }
 
-        // Récupération de la base de requête
-        $baseQuery = Assignment::join('tasks', 'assignments.task_id', '=', 'tasks.id')
-            ->where('tasks.client_id', $clientId);
+        // Récupérer toutes les affectations du client via les relations Eloquent
+        $assignments = Assignment::whereHas('task', function ($query) use ($clientId) {
+            $query->where('client_id', $clientId);
+        });
 
-        // Récupération du nombre total d'affectations
-        $totalAssignments = (clone $baseQuery)->count();
+        $total = $assignments->count();
 
-        // Récupération du nombre d'affectations par statut
-        $pendingAssignments = (clone $baseQuery)
-            ->where('assignments.status', Util::ASSIGNMENTS_STATUSES["PENDING"])
+        $pending = (clone $assignments)
+            ->where('status', Util::ASSIGNMENTS_STATUSES['PENDING'])
             ->count();
 
-        $acceptedAssignments = (clone $baseQuery)
-            ->where('assignments.status', Util::ASSIGNMENTS_STATUSES["ASSIGNED"])
+        $accepted = (clone $assignments)
+            ->where('status', Util::ASSIGNMENTS_STATUSES['ASSIGNED'])
             ->count();
 
-        $submittedAssignments = (clone $baseQuery)
-            ->whereIn('assignments.status', [
-                Util::ASSIGNMENTS_STATUSES["SUBMITED"],
-                Util::ASSIGNMENTS_STATUSES["SUBMISSION_ACCEPTED"],
-                Util::ASSIGNMENTS_STATUSES["SUBMISSION_REJECTED"]
+        $submitted = (clone $assignments)
+            ->whereIn('status', [
+                Util::ASSIGNMENTS_STATUSES['SUBMITED'],
+                Util::ASSIGNMENTS_STATUSES['SUBMISSION_ACCEPTED'],
+                Util::ASSIGNMENTS_STATUSES['SUBMISSION_REJECTED']
             ])
             ->count();
 
-        $paidAssignments = (clone $baseQuery)
-            ->where('assignments.status', Util::ASSIGNMENTS_STATUSES["PAID"])
+        $paid = (clone $assignments)
+            ->where('status', Util::ASSIGNMENTS_STATUSES['PAID'])
             ->count();
 
-        $rejectedAssignments = (clone $baseQuery)
-            ->where('assignments.status', Util::ASSIGNMENTS_STATUSES["REJECTED"])
+        $rejected = (clone $assignments)
+            ->where('status', Util::ASSIGNMENTS_STATUSES['REJECTED'])
             ->count();
 
-        // Récupération du budget utilisé (payé et en attente)
-        $paidBudget = (clone $baseQuery)
-            ->where('assignments.status', Util::ASSIGNMENTS_STATUSES["PAID"])
-            ->sum('assignments.gain');
+        $paidBudget = (clone $assignments)
+            ->where('status', Util::ASSIGNMENTS_STATUSES['PAID'])
+            ->sum('gain');
 
-        $pendingBudget = (clone $baseQuery)
-            ->whereIn('assignments.status', [
-                Util::ASSIGNMENTS_STATUSES["PENDING"],
-                Util::ASSIGNMENTS_STATUSES["ASSIGNED"],
-                Util::ASSIGNMENTS_STATUSES["SUBMITED"],
-                Util::ASSIGNMENTS_STATUSES["SUBMISSION_ACCEPTED"],
-                Util::ASSIGNMENTS_STATUSES["SUBMISSION_REJECTED"]
+        $pendingBudget = (clone $assignments)
+            ->whereIn('status', [
+                Util::ASSIGNMENTS_STATUSES['PENDING'],
+                Util::ASSIGNMENTS_STATUSES['ASSIGNED'],
+                Util::ASSIGNMENTS_STATUSES['SUBMITED'],
+                Util::ASSIGNMENTS_STATUSES['SUBMISSION_ACCEPTED'],
+                Util::ASSIGNMENTS_STATUSES['SUBMISSION_REJECTED']
             ])
-            ->sum('assignments.gain');
+            ->sum('gain');
 
         return [
-            'total' => $totalAssignments ?? 0,
-            'pending' => $pendingAssignments ?? 0,
-            'accepted' => $acceptedAssignments ?? 0,
-            'submitted' => $submittedAssignments ?? 0,
-            'paid' => $paidAssignments ?? 0,
-            'rejected' => $rejectedAssignments ?? 0,
-            'paid_budget' => $paidBudget ?? 0,
-            'pending_budget' => $pendingBudget ?? 0
+            'total' => $total,
+            'pending' => $pending,
+            'accepted' => $accepted,
+            'submitted' => $submitted,
+            'paid' => $paid,
+            'rejected' => $rejected,
+            'paid_budget' => $paidBudget,
+            'pending_budget' => $pendingBudget
         ];
     }
+
 
     /**
      * Récupère les affectations pour un ensemble de tâches
@@ -463,24 +498,14 @@ class AssignmentService
     public function getAssignmentsByTasks($taskIds)
     {
         if (empty($taskIds)) {
-            return [];
-        }
-
-        // Vérifier si la colonne task_id existe réellement
-        if (!Schema::hasColumn('assignments', 'task_id')) {
-            return [];
+            return collect(); // Retourne une collection vide
         }
 
         $taskIds = is_array($taskIds) ? $taskIds : [$taskIds];
 
-        return Assignment::select([
-            'assignments.*',
-            DB::raw("CONCAT(users.firstname, ' ', users.lastname) as agent_name"),
-            'users.email as agent_email'
-        ])
-            ->leftJoin('users', 'assignments.agent_id', '=', 'users.id')
-            ->whereIn('assignments.task_id', $taskIds)
-            ->orderBy('assignments.created_at', 'desc')
+        return Assignment::with('agent') // Charger les agents
+            ->whereIn('task_id', $taskIds)
+            ->orderBy('created_at', 'desc')
             ->get();
     }
 }

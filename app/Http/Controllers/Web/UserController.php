@@ -528,7 +528,7 @@ class UserController extends Controller
         }
 
         $userId = $request->session()->get('userid');
-        dd($userId);
+
         $user = $this->userService->getUserById($userId);
 
         if (!$user) {

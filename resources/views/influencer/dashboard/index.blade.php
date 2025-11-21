@@ -27,7 +27,7 @@
                         <div class="d-flex">
                             <div class="flex-grow-1">
                                 <h6 class="mb-2 text-uppercase text-muted">Missions actives</h6>
-                                <h4 class="mb-0">{{ $viewData['assignmentStats']['active_count'] ?? 0 }}</h4>
+                                <h4 class="mb-0">{{ $viewData['assignmentStats']['active'] ?? 0 }}</h4>
                             </div>
                             <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                 <span class="avatar-title rounded-circle bg-primary">
@@ -45,7 +45,7 @@
                         <div class="d-flex">
                             <div class="flex-grow-1">
                                 <h6 class="mb-2 text-uppercase text-muted">Missions complétées</h6>
-                                <h4 class="mb-0">{{ $viewData['assignmentStats']['completed_count'] ?? 0 }}</h4>
+                                <h4 class="mb-0">{{ $viewData['assignmentStats']['completed'] ?? 0 }}</h4>
                             </div>
                             <div class="avatar-sm rounded-circle bg-success align-self-center mini-stat-icon">
                                 <span class="avatar-title rounded-circle bg-success">
@@ -63,7 +63,7 @@
                         <div class="d-flex">
                             <div class="flex-grow-1">
                                 <h6 class="mb-2 text-uppercase text-muted">Gains totaux</h6>
-                                <h4 class="mb-0">{{ number_format($viewData['earningsStats']['total_earnings'] ?? 0) }} F
+                                <h4 class="mb-0">{{ number_format($viewData['earningsStats']['total_gain'] ?? 0) }} F
                                 </h4>
                             </div>
                             <div class="avatar-sm rounded-circle bg-info align-self-center mini-stat-icon">
@@ -83,8 +83,8 @@
                             <div class="flex-grow-1">
                                 <h6 class="mb-2 text-uppercase text-muted">Taux d'acceptation</h6>
                                 @php
-                                    $totalAssignments = $viewData['assignmentStats']['total_count'] ?? 0;
-                                    $completedAssignments = $viewData['assignmentStats']['completed_count'] ?? 0;
+                                    $totalAssignments = $viewData['assignmentStats']['total'] ?? 0;
+                                    $completedAssignments = $viewData['assignmentStats']['completed'] ?? 0;
                                     $acceptanceRate =
                                         $totalAssignments > 0
                                             ? round(($completedAssignments / $totalAssignments) * 100)
@@ -119,6 +119,7 @@
                                         <th>Date</th>
                                         <th>Statut</th>
                                         <th>Gain prévu</th>
+                                        <th>Gain obtenu</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -141,11 +142,22 @@
                                                     <span class="badge bg-success">Terminée</span>
                                                 @elseif($assignment->status == 'REJECTED')
                                                     <span class="badge bg-danger">Rejetée</span>
+                                                @elseif($assignment->status == 'SUBMISSION_ACCEPTED')
+                                                    <span class="badge bg-success">Résultat validé</span>
+                                                @elseif($assignment->status == 'SUBMISSION_REJECTED')
+                                                    <span class="badge bg-danger">Résultat rejeté</span>
                                                 @else
                                                     <span class="badge bg-secondary">{{ $assignment->status }}</span>
                                                 @endif
                                             </td>
                                             <td>{{ number_format($assignment->expected_gain ?? 0) }} F </td>
+                                            <td>
+                                                @if ($assignment->status == 'SUBMISSION_ACCEPTED')
+                                                    {{ number_format($assignment->gain ?? 0) }} F
+                                                @else
+                                                    0 F
+                                                @endif
+                                            </td>
                                             <td>
                                                 <a href="{{ route('influencer.campaigns.show', ['id' => $assignment->id]) }}"
                                                     class="btn btn-primary btn-sm">

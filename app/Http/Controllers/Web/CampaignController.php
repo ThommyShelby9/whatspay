@@ -12,6 +12,7 @@ use App\Services\MediaService;
 use App\Traits\Utils;
 use App\Models\Locality;
 use App\Models\Occupation;
+use App\Services\UserService;
 use App\Services\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class CampaignController extends Controller
     protected $trackingService;
     protected $mediaService;
     protected $walletService;
+    protected $userService;
 
     public function __construct(
         TaskService $taskService,
@@ -34,14 +36,14 @@ class CampaignController extends Controller
         AssignmentService $assignmentService,
         TrackingService $trackingService,
         MediaService $mediaService,
-        WalletService $walletService,
+        UserService $userService,
     ) {
         $this->taskService = $taskService;
         $this->categoryService = $categoryService;
         $this->assignmentService = $assignmentService;
         $this->trackingService = $trackingService;
         $this->mediaService = $mediaService;
-        $this->walletService = $walletService;
+        $this->userService = $userService;
     }
 
     public function index(Request $request)
@@ -269,14 +271,6 @@ class CampaignController extends Controller
                 'url' => 'required|url',
             ]);
         }
-
-        $balance = $this->walletService->getBalance($userId) ?? 0;
-
-        /* if ($balance < $request->budget) {
-            return redirect()->route('announcer.wallet')
-                ->with('type', 'danger')
-                ->with('message', 'Votre solde est insuffisant, veuillez ajouter des fonds !');
-        } */
 
         // Traitement des fichiers uploadés
         $files = [];

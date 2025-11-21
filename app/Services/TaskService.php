@@ -150,6 +150,8 @@ class TaskService
 
             $taskId = $this->getId();
 
+            $user = User::findOrFail($taskData['client_id']);
+
             // Récupérer un id 'principal' si un tableau est passé
             $primaryLocality = null;
             if (!empty($taskData['localities'])) {
@@ -161,6 +163,17 @@ class TaskService
             if (!empty($taskData['occupations'])) {
                 $primaryOccupation = is_array($taskData['occupations']) ? ($taskData['occupations'][0] ?? null) : $taskData['occupations'];
             }
+
+            /* if ($user->roles->typerole === 'ANNONCEUR') {
+                $balance = $user->wallet->balance;
+
+                if ($balance < $taskData['budget'] || $balance === 0) {
+                    return $result = [
+                        'success' => false,
+                        'message' => 'Votre solde est insuffisant, veuillez éffectuer un dépot pour ajouter des fonds !'
+                    ];
+                }
+            } */
 
             // Préparer les données de base de la tâche
             $task = [
@@ -183,6 +196,10 @@ class TaskService
 
             // Créer la tâche
             $taskModel = Task::create($task);
+
+            /* if ($taskModel && $user->roles->typerole === 'ANNONCEUR') {
+                $user->wallet->debit($task['budget']);
+            } */
 
             // Ajouter les champs optionnels s'ils existent dans le schéma
             if (!empty($taskData['url'])) {
@@ -461,7 +478,7 @@ class TaskService
             //dd($agents);
 
             // Random Greedy search
-            $finalAgents = [];
+            /* $finalAgents = [];
             $attempts = 15;
 
             while ($attempts--) {
@@ -480,13 +497,34 @@ class TaskService
                     $finalAgents = $selected;
                     break;
                 }
-            }
+            } */
 
             //dd($finalAgents);
 
-            if (empty($finalAgents)) {
+            /* if (empty($finalAgents)) {
                 DB::rollBack();
                 return ['success' => false, 'message' => 'Impossible de trouver une combinaison suffisante de diffuseurs.'];
+            } */
+
+            // Trier par vues moyennes croissantes
+            usort($agents, function ($a, $b) {
+                return $a['vues'] <=> $b['vues'];
+            });
+
+            // Sélectionner les plus petits jusqu'à atteindre dailyRequired
+            $finalAgents = [];
+            $sum = 0;
+
+            foreach ($agents as $a) {
+                if ($sum >= $dailyRequired) break;
+
+                $finalAgents[] = $a['model'];
+                $sum += $a['vues'];
+            }
+
+            if ($sum < $dailyRequired) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'Impossible d’atteindre les vues requises avec les diffuseurs disponibles.'];
             }
 
             // Création des assignments

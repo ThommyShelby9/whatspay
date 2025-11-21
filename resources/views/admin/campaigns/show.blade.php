@@ -147,17 +147,25 @@
                                                             @php
                                                                 $statusClasses = [
                                                                     'PENDING' => 'bg-warning',
-                                                                    'APPROVED' => 'bg-success',
+                                                                    'ACCEPTED' => 'bg-success',
                                                                     'REJECTED' => 'bg-danger',
                                                                     'PAID' => 'bg-info',
                                                                     'CLOSED' => 'bg-secondary',
                                                                 ];
+                                                                $statusLabel = [
+                                                                    'PENDING' => 'En cours',
+                                                                    'ACCEPTED' => 'Acceptée',
+                                                                    'REJECTED' => 'Rejetée',
+                                                                    'PAID' => 'bg-info',
+                                                                    'CLOSED' => 'Clôturée',
+                                                                ];
                                                                 $statusClass =
                                                                     $statusClasses[$task->status] ?? 'bg-secondary';
+                                                                $statusLabel = $statusLabel[$task->status] ?? 'Inconnu';
                                                             @endphp
 
                                                             <span class="badge {{ $statusClass }}">
-                                                                {{ $task->status }}
+                                                                {{ $statusLabel }}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -396,13 +404,14 @@
                                         <div class="card-body">
                                             @if (count($viewData['assignments'] ?? []) > 0)
                                                 <div class="table-responsive">
-                                                    <table class="table table-hover">
+                                                    <table class="display table table-hover" id="items_datatable">
                                                         <thead>
                                                             <tr>
                                                                 <th>Diffuseur</th>
                                                                 <th>Date d'attribution</th>
                                                                 <th>Statut</th>
-                                                                <th>Vues</th>
+                                                                <th>Vues estimées</th>
+                                                                <th>Vues obtenues</th>
                                                                 <th>Date de soumission</th>
                                                                 <th>Actions</th>
                                                             </tr>
@@ -416,18 +425,18 @@
                                                                         <div class="d-flex align-items-center">
                                                                             <div
                                                                                 class="avatar avatar-sm me-2 bg-primary text-white">
-                                                                                {{ substr($assignment->agent_firstname, 0, 1) }}
-                                                                                {{ substr($assignment->agent_lastname, 0, 1) }}
+                                                                                {{ substr($assignment->agent->firstname, 0, 1) }}
+                                                                                {{ substr($assignment->agent->lastname, 0, 1) }}
                                                                             </div>
 
                                                                             <div>
                                                                                 <div>
-                                                                                    {{ $assignment->agent_firstname }}
-                                                                                    {{ $assignment->agent_lastname }}
+                                                                                    {{ $assignment->agent->firstname }}
+                                                                                    {{ $assignment->agent->lastname }}
                                                                                 </div>
 
                                                                                 <small class="text-muted">
-                                                                                    {{ $assignment->agent_email }}
+                                                                                    {{ $assignment->agent->email }}
                                                                                 </small>
                                                                             </div>
                                                                         </div>
@@ -441,34 +450,50 @@
                                                                         @php
                                                                             $statusClasses = [
                                                                                 'PENDING' => 'bg-warning',
-                                                                                'COMPLETED' => 'bg-success',
-                                                                                'REJECTED' => 'bg-danger',
+                                                                                'SUBMITED' => 'bg-success',
+                                                                                'ASSIGNED' => 'bg-secondary',
+                                                                                'SUBMISSION_ACCEPTED' => 'bg-success',
+                                                                                'SUBMISSION_REJECTED' => 'bg-error',
+                                                                            ];
+                                                                            $statusLabel = [
+                                                                                'PENDING' => 'En cours',
+                                                                                'SUBMITED' => 'Terminée',
+                                                                                'ASSIGNED' => 'Assignée',
+                                                                                'SUBMISSION_ACCEPTED' =>
+                                                                                    'Résultat validé',
+                                                                                'SUBMISSION_REJECTED' =>
+                                                                                    'Résultat rejeté',
                                                                             ];
                                                                             $statusClass =
                                                                                 $statusClasses[$assignment->status] ??
                                                                                 'bg-secondary';
+                                                                            $statusLabel =
+                                                                                $statusLabel[$assignment->status] ??
+                                                                                'Inconnu';
                                                                         @endphp
 
                                                                         <span class="badge {{ $statusClass }}">
-                                                                            {{ $assignment->status }}
+                                                                            {{ $statusLabel }}
                                                                         </span>
                                                                     </td>
 
                                                                     <!-- Vues -->
+                                                                    <td>{{ $assignment->expected_views }}</td>
                                                                     <td>{{ $assignment->vues }}</td>
 
                                                                     <!-- Soumission -->
                                                                     <td>
                                                                         {{ $assignment->submission_date
                                                                             ? \Carbon\Carbon::parse($assignment->submission_date)->format('d/m/Y H:i')
-                                                                            : '-' }}
+                                                                            : 'Pas de soumissions' }}
                                                                     </td>
 
                                                                     <!-- Actions -->
                                                                     <td>
-                                                                        <button class="btn btn-sm btn-light">
-                                                                            <i class="fas fa-eye me-1"></i>Voir
-                                                                        </button>
+                                                                        <a href="{{ route('admin.show.result', $assignment->id) }}"
+                                                                            class="btn btn-sm btn-light">
+                                                                            <i class="fa fa-eye me-1"></i>Voir
+                                                                        </a>
                                                                     </td>
 
                                                                 </tr>

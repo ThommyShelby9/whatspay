@@ -24,14 +24,24 @@
                                 <h6>ADMIN</h6>
                             </div>
                         </li>
-                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i><a class="sidebar-link sidebar-title"
-                                href="#">
+                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
+                            <a class="sidebar-link sidebar-title {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                                href="{{ route('admin.dashboard') }}">
                                 <svg class="stroke-icon">
                                     <use href="/design/admin/assets/svg/icon-sprite.svg#stroke-home"></use>
                                 </svg>
                                 <svg class="fill-icon">
                                     <use href="/design/admin/assets/svg/icon-sprite.svg#fill-home"></use>
-                                </svg><span>Utilisateurs</span></a>
+                                </svg>
+                                <span>Tableau de bord</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
+                            <a class="sidebar-link sidebar-title" href="#">
+                                <i class="stroke-icon fa fa-user"></i>
+                                <i class="fill-icon fa fa-user"></i>
+                                <span>Utilisateurs</span>
+                            </a>
                             <ul class="sidebar-submenu">
                                 <li><a href="/admin/users_admin">Admins</a></li>
                                 <li><a href="/admin/users_annonceur">Annonceurs</a></li>
@@ -39,25 +49,31 @@
                             </ul>
                         </li>
 
-                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i><a class="sidebar-link sidebar-title"
-                                href="#">
-                                <svg class="stroke-icon">
-                                    <use href="/design/admin/assets/svg/icon-sprite.svg#stroke-home"></use>
-                                </svg>
-                                <svg class="fill-icon">
-                                    <use href="/design/admin/assets/svg/icon-sprite.svg#fill-home"></use>
-                                </svg><span>Campagnes</span></a>
+                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
+                            <a class="sidebar-link sidebar-title" href="#">
+                                <i class="stroke-icon fa fa-bullhorn"></i>
+                                <i class="fill-icon fa fa-bullhorn"></i>
+                                <span>Campagnes</span>
+                            </a>
                             <ul class="sidebar-submenu">
                                 <li><a href="/admin/tasks">Demandes</a></li>
                                 <!-- li><a  href="/admin/assignments">Soumissions</a></li -->
                             </ul>
                         </li>
                         <!-- Add this to your admin navigation menu -->
-                        <li class="sidebar-list">
-                            <a class="sidebar-link sidebar-title" href="{{ route('admin.whatsapp_messaging') }}">
-                                <i class="fab fa-whatsapp"></i>
-                                <span class="lan-3">Messages WhatsApp</span>
+                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
+                            <a class="sidebar-link sidebar-title {{ request()->routeIs('admin.whatsapp_messaging') ? 'active' : '' }}"
+                                href="#">
+                                <i class="stroke-icon fa fa-whatsapp"></i>
+                                <i class="fill-icon fa fa-whatsapp"></i>
+                                <span>WhatsApp</span>
                             </a>
+                            <ul class="sidebar-submenu">
+                                <li><a href="{{ route('admin.whatsapp_messaging') }}">Messages</a></li>
+                                <li><a href="/admin/whatsappnumbers"
+                                        class="{{ request()->is('admin/whatsappnumbers') ? 'active' : '' }}">Numéros
+                                        WhatsApp</a></li>
+                            </ul>
                         </li>
                     @endif
 
@@ -137,10 +153,10 @@
                             <a class="sidebar-link sidebar-title" href="#">
                                 <i class="stroke-icon fa fa-whatsapp"></i>
                                 <i class="fill-icon fa fa-whatsapp"></i>
-                                <span>Campagnes</span>
+                                <span>Whatsapp</span>
                             </a>
                             <ul class="sidebar-submenu">
-                                <li><a href="/admin/whatsappnumbers">Num&eacute;ros Whatsapp</a></li>
+                                <li><a href="/admin/whatsappnumbers">Configuration</a></li>
                                 <!-- li><a href="/admin/tasks">Demandes</a></li -->
                                 <!-- li><a href="/admin/assignments">Soumissions</a></li -->
                             </ul>
@@ -241,9 +257,9 @@
                                 <li><a href="{{ route('influencer.whatsapp') }}"
                                         class="{{ request()->routeIs('influencer.whatsapp') ? 'active' : '' }}">Configuration</a>
                                 </li>
-                                <li><a href="/admin/whatsappnumbers"
+                                {{-- <li><a href="/admin/whatsappnumbers"
                                         class="{{ request()->is('admin/whatsappnumbers') ? 'active' : '' }}">Num&eacute;ros
-                                        WhatsApp</a></li>
+                                        WhatsApp</a></li> --}}
                             </ul>
                         </li>
 

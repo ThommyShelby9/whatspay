@@ -34,4 +34,20 @@ class Wallet extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
+    public function credit(float $amount)
+    {
+        $this->balance += $amount;
+        $this->save();
+    }
+
+    public function debit(float $amount)
+    {
+        if ($this->balance < $amount) {
+            throw new \Exception("Solde insuffisant");
+        }
+
+        $this->balance -= $amount;
+        $this->save();
+    }
 }

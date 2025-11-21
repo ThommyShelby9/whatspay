@@ -12,27 +12,27 @@ use Illuminate\Http\Request;
 class AssignmentController extends Controller
 {
     use Utils;
-    
+
     protected $assignmentService;
-    
+
     public function __construct(AssignmentService $assignmentService)
     {
         $this->assignmentService = $assignmentService;
     }
-    
+
     public function assignmentsGet(Request $request)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $userId = $request->session()->get('userid');
         $profile = $request->session()->get('userprofile');
-        
+
         switch ($profile) {
             case "ADMIN":
                 $viewData["assignments"] = $this->assignmentService->getAllAssignments();
@@ -46,29 +46,29 @@ class AssignmentController extends Controller
         }
 
         $this->setViewData($request, $viewData);
-        
+
         return view('admin.assignments', [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Admin', 
-            'pagetilte' => 'Affectations', 
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => 'Affectations',
             'pagecardtilte' => 'Liste des affectations',
         ]);
     }
-    
+
     public function assignmentGet(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $assignment = $this->assignmentService->getAssignmentById($id);
-        
+
         if (!$assignment) {
             $alert["type"] = "danger";
             $alert["message"] = "Affectation non trouvée";
@@ -77,25 +77,25 @@ class AssignmentController extends Controller
 
         $viewData["assignment"] = $assignment;
         $this->setViewData($request, $viewData);
-        
-        return view('admin.assignment', [
-            'alert' => $alert, 
-            'viewData' => $viewData, 
+
+        return view('admin.assignments', [
+            'alert' => $alert,
+            'viewData' => $viewData,
             'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Admin', 
-            'pagetilte' => 'Détail de l\'affectation', 
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => 'Détail de l\'affectation',
             'pagecardtilte' => '',
         ]);
     }
-    
+
     public function assignmentPost(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $request->validate([
@@ -120,20 +120,20 @@ class AssignmentController extends Controller
             return back()->with($alert);
         }
     }
-    
+
     public function submitResult(Request $request, $id)
     {
-        $viewData = []; 
-        $alert = []; 
+        $viewData = [];
+        $alert = [];
         $this->setAlert($request, $alert);
-        
+
         if (!$this->isConnected()) {
-            return redirect(config('app.url').'/admin/login')->with($alert);
+            return redirect(config('app.url') . '/admin/login')->with($alert);
         }
 
         $request->validate([
             'vues' => 'required|numeric|min:1',
-            'files' => 'required',
+            'files' => 'required|file|mimes:jpg,jpeg,png,webp,mp4,mov,avi|max:20480',
         ]);
 
         $result = $this->assignmentService->submitResult($id, [
@@ -152,7 +152,58 @@ class AssignmentController extends Controller
             return back()->with($alert);
         }
     }
-    
+
+    public function showResult(Request $request, string $id)
+    {
+        $viewData = [];
+        $alert = [];
+        $this->setAlert($request, $alert);
+
+        if (!$this->isConnected()) {
+            return redirect(config('app.url') . '/admin/login')->with($alert);
+        }
+
+        $assignment = $this->assignmentService->getAssignmentById($id);
+
+        if (!$assignment) {
+            $alert["type"] = "danger";
+            $alert["message"] = "Affectation non trouvée";
+            return redirect()->route('admin.assignments')->with($alert);
+        }
+
+        $viewData["assignment"] = $assignment;
+
+        $this->setViewData($request, $viewData);
+
+        return view('admin.submissions.show', [
+            'alert' => $alert,
+            'viewData' => $viewData,
+            'version' => gmdate("YmdHis"),
+            'title' => 'WhatsPAY | Admin',
+            'pagetilte' => 'Détail du résultat',
+            'pagecardtilte' => '',
+        ]);
+    }
+
+    public function validateResult(Request $request, string $id)
+    {
+        $viewData = [];
+        $alert = [];
+        $this->setAlert($request, $alert);
+
+        if (!$this->isConnected()) {
+            return redirect(config('app.url') . '/admin/login')->with($alert);
+        }
+
+        $assignment = $this->assignmentService->getAssignmentById($id);
+
+        $result = $this->assignmentService->validate($assignment, $request);
+
+        $alert["type"] = "success";
+        $alert["message"] = "Résultat soumis avec succès";
+        return back()->with($result);
+    }
+
     private function isConnected()
     {
         return (\Auth::viaRemember() || \Auth::check());

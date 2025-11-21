@@ -241,7 +241,7 @@
                                         <th>Campagne</th>
                                         <th>Dates</th>
                                         <th>Gain</th>
-                                        <th>Vues</th>
+                                        <th>Vues obtenues</th>
                                         <th>Statut</th>
                                         <th>Actions</th>
                                     </tr>

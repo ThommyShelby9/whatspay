@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\AssignDailyTasks::class,
+        \App\Console\Commands\CloseEndedTasks::class,
     ];
 
     /**
@@ -45,6 +46,9 @@ class Kernel extends ConsoleKernel
         // Run every 30 minutes to catch assignments at the ~23.5 hour mark
         $schedule->command('whatspay:send-screenshot-reminders')
             ->everyThirtyMinutes();
+
+        //Clôturé toutes les tâches dont le délai est atteint
+        $schedule->command('tasks:close-ended')->daily();
     }
 
 

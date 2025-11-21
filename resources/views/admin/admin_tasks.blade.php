@@ -302,7 +302,7 @@
                                                         'APPROVED' => ['Approuvée', 'bg-success'],
                                                         'PAID' => ['Payée', 'bg-success'],
                                                         'REJECTED' => ['Rejetée', 'bg-danger'],
-                                                        'CLOSED' => ['Fermée', 'bg-secondary'],
+                                                        'CLOSED' => ['Clôturée', 'bg-secondary'],
                                                     ];
                                                     $statusInfo = $statusLabels[$status] ?? [$status, 'bg-secondary'];
                                                 @endphp

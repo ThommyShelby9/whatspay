@@ -10,7 +10,7 @@ use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WhatsAppController;
 use App\Http\Controllers\Web\Admin\DashboardAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
-
+use App\Http\Controllers\Web\AssignmentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -134,6 +134,14 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 
     // Dashboard Annonceur
     Route::get('/client/dashboard', [DashboardController::class, 'announcerDashboard'])->name('admin.client.dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes pour la gestion des résultats
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/admin/task/submission/{id}', [AssignmentController::class, 'showResult'])->name('admin.show.result');
+    Route::put('/admin/task/submission/{id}', [AssignmentController::class, 'validateResult'])->name('admin.update.result');
 });
 
 /*
@@ -313,7 +321,7 @@ Route::get('/test-payplus', function () {
 Route::get('/debug-middlewares', function () {
     $router = app('router');
     $routes = $router->getRoutes();
-    
+
     foreach ($routes as $route) {
         if ($route->uri() === 'admin/login') {
             return [

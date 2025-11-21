@@ -105,18 +105,19 @@ class CampaignController extends Controller
             'response_date' => now(),
         ]);
 
-        $viewData['assignments'] = $this->assignmentService->getClientAssignments($userId);
+        $assignment->refresh();
+
+        $viewData['assignment'] = $assignment;
 
         $this->setViewData($request, $viewData);
 
-        return view('influencer.campaigns.accepted', [
-            'alert' => $alert,
-            'viewData' => $viewData,
-            'version' => gmdate("YmdHis"),
-            'title' => 'WhatsPAY | Mes Missions',
-            'pagetilte' => 'Mes Missions',
-            'pagecardtilte' => 'Campagnes en cours'
-        ]);
+        return redirect()->route('influencer.campaigns.show', $assignment->id)
+            ->with('alert', $alert)
+            ->with('viewData', $viewData)
+            ->with('version', gmdate("YmdHis"))
+            ->with('title', 'WhatsPAY | Détails Mission')
+            ->with('pagetilte', 'Détails de la mission')
+            ->with('pagecardtilte', 'Informations sur la campagne');
     }
 
     public function show(Request $request, $id)
@@ -195,10 +196,21 @@ class CampaignController extends Controller
             'files' => 'required|file|max:15000',
         ]);
 
+
+        $files = [];
+
+        if ($request->hasFile('files')) {
+            $file = $request->file('files');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('uploads', $fileName, 'public');
+            $files[] = ['name' => $fileName, 'path' => $filePath];
+        }
+
+
         $submissionData = [
             'agent_id' => $userId,
             'vues' => $request->input('vues'),
-            'files' => $request->input('files'),
+            'files' => $files,
         ];
 
         $result = $this->assignmentService->submitResult($id, $submissionData);

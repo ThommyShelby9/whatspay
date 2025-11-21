@@ -25,8 +25,11 @@ class TaskController extends Controller
     protected $assignmentService;
     protected $trackingService;
 
-    public function __construct(TaskService $taskService, TrackingService $trackingService, AssignmentService $assignmentService = null)
-    {
+    public function __construct(
+        TaskService $taskService,
+        TrackingService $trackingService,
+        AssignmentService $assignmentService
+    ) {
         $this->taskService = $taskService;
         $this->assignmentService = $assignmentService;
         $this->trackingService = $trackingService;
