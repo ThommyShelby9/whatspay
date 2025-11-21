@@ -196,7 +196,7 @@ class TestDataSeeder extends Seeder
 
         $tasks = [];
         //$taskTypes = ['URL', 'TXT', 'IMG', 'VID'];
-        //$taskStatuses = ['PENDING'];
+        $taskStatuses = ['PENDING'];
 
         foreach ($annonceurs as $annonceur) {
             $numberOfCampaigns = 3; // Fixe volontairement pour les tests
@@ -220,7 +220,7 @@ class TestDataSeeder extends Seeder
                     'startdate' => $startDate,
                     'enddate' => $endDate,
                     'budget' => $budget,
-                    'status' => 'ACCEPTED', // IMPORTANT
+                    'status' => $taskStatuses, // IMPORTANT
                     'client_id' => $annonceur->id,
                     'locality_id' => $testLocality->id,
                     'occupation_id' => $testOccupation->id,
