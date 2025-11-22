@@ -76,6 +76,7 @@ class AssignmentController extends Controller
         }
 
         $viewData["assignment"] = $assignment;
+
         $this->setViewData($request, $viewData);
 
         return view('admin.assignments', [

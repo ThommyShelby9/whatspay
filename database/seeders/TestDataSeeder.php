@@ -35,7 +35,7 @@ class TestDataSeeder extends Seeder
         $adminRole = Role::where('typerole', 'ADMIN')->first();
 
         $country = Country::where('name', 'Benin')->first() ?? Country::first();
-        $localities = Locality::where('country_id', $country->id)->limit(5)->get();
+        $localities = Locality::where('type', 2)->limit(5)->get();
         $categories = Category::where('enabled', true)->limit(10)->get();
         $occupations = Occupation::where('enabled', true)->limit(10)->get();
 
@@ -109,8 +109,8 @@ class TestDataSeeder extends Seeder
         // ========================================
         $this->command->info('📱 Création des 5 diffuseurs...');
 
-        $testLocality = Locality::where('country_id', $country->id)->first();
-        $testOccupation = Occupation::where('enabled', true)->first();
+        /* $testLocality = Locality::where('country_id', $country->id)->first();
+        $testOccupation = Occupation::where('enabled', true)->first(); */
 
         $diffuseurs = [];
         $diffuseurData = [
@@ -118,7 +118,7 @@ class TestDataSeeder extends Seeder
                 'firstname' => 'Aïcha',
                 'lastname' => 'Diallo',
                 'email' => 'aicha.diallo@example.com',
-                'vuesmoyen' => 5000,
+                'vuesmoyen' => 500,
                 'occupation' => 'Influenceur',
                 'profile' => 'Influenceuse mode et lifestyle',
             ],
@@ -126,7 +126,7 @@ class TestDataSeeder extends Seeder
                 'firstname' => 'Kofi',
                 'lastname' => 'Tognon',
                 'email' => 'kofi.tognon@example.com',
-                'vuesmoyen' => 3500,
+                'vuesmoyen' => 350,
                 'occupation' => 'Entrepreneur',
                 'profile' => 'Entrepreneur tech, communauté startup',
             ],
@@ -134,7 +134,7 @@ class TestDataSeeder extends Seeder
                 'firstname' => 'Fatou',
                 'lastname' => 'Sow',
                 'email' => 'fatou.sow@example.com',
-                'vuesmoyen' => 8000,
+                'vuesmoyen' => 800,
                 'occupation' => 'Influenceur',
                 'profile' => 'Influenceuse beauté et santé',
             ],
@@ -142,7 +142,7 @@ class TestDataSeeder extends Seeder
                 'firstname' => 'Moussa',
                 'lastname' => 'Traoré',
                 'email' => 'moussa.traore@example.com',
-                'vuesmoyen' => 2000,
+                'vuesmoyen' => 200,
                 'occupation' => 'Étudiant',
                 'profile' => 'Étudiant en communication',
             ],
@@ -150,7 +150,7 @@ class TestDataSeeder extends Seeder
                 'firstname' => 'Awa',
                 'lastname' => 'Bah',
                 'email' => 'awa.bah@example.com',
-                'vuesmoyen' => 6500,
+                'vuesmoyen' => 650,
                 'occupation' => 'Commerçant',
                 'profile' => 'Commerçante avec large réseau',
             ],
@@ -172,8 +172,8 @@ class TestDataSeeder extends Seeder
                     'enabled' => true,
                     'email_verified_at' => now(),
                     'country_id' => $country->id,
-                    'locality_id' => $testLocality->id,
-                    'occupation_id' => $testOccupation->id,
+                    'locality_id' => $localities->random()->id,
+                    'occupation_id' => $occupation->id,
                     'phone' => '+229' . rand(60000000, 99999999),
                     'vuesmoyen' => $data['vuesmoyen'],
                 ]);
@@ -192,10 +192,10 @@ class TestDataSeeder extends Seeder
         // ========================================
         // 3. CRÉATION DES CAMPAGNES (TASKS)
         // ========================================
-        $this->command->info('📢 Création des campagnes pour chaque annonceur...');
+        /* $this->command->info('📢 Création des campagnes pour chaque annonceur...');
 
         $tasks = [];
-        //$taskTypes = ['URL', 'TXT', 'IMG', 'VID'];
+        $taskTypes = ['URL', 'TXT', 'IMG', 'VID'];
         $taskStatuses = ['PENDING'];
 
         foreach ($annonceurs as $annonceur) {
@@ -222,8 +222,8 @@ class TestDataSeeder extends Seeder
                     'budget' => $budget,
                     'status' => $taskStatuses, // IMPORTANT
                     'client_id' => $annonceur->id,
-                    'locality_id' => $testLocality->id,
-                    'occupation_id' => $testOccupation->id,
+                    'locality_id' => $localities->random()->id,
+                    'occupation_id' => $occupations->random()->id,
                 ]);
 
                 // Ajouter des catégories
@@ -231,9 +231,9 @@ class TestDataSeeder extends Seeder
 
                 $tasks[] = $task;
 
-                $this->command->info("   ➤ Task ACTIVE créée : {$task->name} | Loc: {$testLocality->name}, Occ: {$testOccupation->name}");
+                $this->command->info("   ➤ Task ACTIVE créée : {$task->name} ");
             }
-        }
+        } */
 
         // ========================================
         // 4. CRÉATION DES ASSIGNMENTS
@@ -296,7 +296,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('📊 RÉSUMÉ DES DONNÉES CRÉÉES:');
         $this->command->info('   • Annonceurs: ' . count($annonceurs));
         $this->command->info('   • Diffuseurs: ' . count($diffuseurs));
-        $this->command->info('   • Campagnes (Tasks): ' . count($tasks));
+        //$this->command->info('   • Campagnes (Tasks): ' . count($tasks));
         //$this->command->info('   • Assignments: ' . $assignmentCount);
         $this->command->info('');
         $this->command->info('🔑 COMPTES DE TEST:');

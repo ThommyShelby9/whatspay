@@ -206,14 +206,14 @@
                         </li>
 
                         <!-- Performances -->
-                        <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
+                        {{-- <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>
                             <a class="sidebar-link sidebar-title {{ request()->routeIs('influencer.performance') ? 'active' : '' }}"
                                 href="{{ route('influencer.performance') }}">
                                 <i class="stroke-icon fa fa-certificate"></i>
                                 <i class="fill-icon fa fa-certificate"></i>
                                 <span>Performances</span>
                             </a>
-                        </li>
+                        </li> --}}
 
                         <!-- Gains -->
                         <li class="sidebar-list"><i class="fa fa-thumb-tack"></i>

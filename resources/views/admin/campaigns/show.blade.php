@@ -419,84 +419,88 @@
 
                                                         <tbody>
                                                             @foreach ($viewData['assignments'] as $assignment)
-                                                                <tr>
-                                                                    <!-- Diffuseur -->
-                                                                    <td>
-                                                                        <div class="d-flex align-items-center">
-                                                                            <div
-                                                                                class="avatar avatar-sm me-2 bg-primary text-white">
-                                                                                {{ substr($assignment->agent->firstname, 0, 1) }}
-                                                                                {{ substr($assignment->agent->lastname, 0, 1) }}
-                                                                            </div>
-
-                                                                            <div>
-                                                                                <div>
-                                                                                    {{ $assignment->agent->firstname }}
-                                                                                    {{ $assignment->agent->lastname }}
+                                                                @if ($assignment->agent)
+                                                                    <tr>
+                                                                        <!-- Diffuseur -->
+                                                                        <td>
+                                                                            <div class="d-flex align-items-center">
+                                                                                <div
+                                                                                    class="avatar avatar-sm me-2 bg-primary text-white">
+                                                                                    {{ substr($assignment->agent?->firstname, 0, 1) }}
+                                                                                    {{ substr($assignment->agent?->lastname, 0, 1) }}
                                                                                 </div>
 
-                                                                                <small class="text-muted">
-                                                                                    {{ $assignment->agent->email }}
-                                                                                </small>
+                                                                                <div>
+                                                                                    <div>
+                                                                                        {{ $assignment->agent?->firstname }}
+                                                                                        {{ $assignment->agent?->lastname }}
+                                                                                    </div>
+
+                                                                                    <small class="text-muted">
+                                                                                        {{ $assignment->agent?->email }}
+                                                                                    </small>
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    </td>
-                                                                    <!-- Attribution -->
-                                                                    <td>
-                                                                        {{ \Carbon\Carbon::parse($assignment->assignment_date)->format('d/m/Y H:i') }}
-                                                                    </td>
-                                                                    <!-- Statut -->
-                                                                    <td>
-                                                                        @php
-                                                                            $statusClasses = [
-                                                                                'PENDING' => 'bg-warning',
-                                                                                'SUBMITED' => 'bg-success',
-                                                                                'ASSIGNED' => 'bg-secondary',
-                                                                                'SUBMISSION_ACCEPTED' => 'bg-success',
-                                                                                'SUBMISSION_REJECTED' => 'bg-error',
-                                                                            ];
-                                                                            $statusLabel = [
-                                                                                'PENDING' => 'En cours',
-                                                                                'SUBMITED' => 'Terminée',
-                                                                                'ASSIGNED' => 'Assignée',
-                                                                                'SUBMISSION_ACCEPTED' =>
-                                                                                    'Résultat validé',
-                                                                                'SUBMISSION_REJECTED' =>
-                                                                                    'Résultat rejeté',
-                                                                            ];
-                                                                            $statusClass =
-                                                                                $statusClasses[$assignment->status] ??
-                                                                                'bg-secondary';
-                                                                            $statusLabel =
-                                                                                $statusLabel[$assignment->status] ??
-                                                                                'Inconnu';
-                                                                        @endphp
+                                                                        </td>
+                                                                        <!-- Attribution -->
+                                                                        <td>
+                                                                            {{ \Carbon\Carbon::parse($assignment->assignment_date)->format('d/m/Y H:i') }}
+                                                                        </td>
+                                                                        <!-- Statut -->
+                                                                        <td>
+                                                                            @php
+                                                                                $statusClasses = [
+                                                                                    'PENDING' => 'bg-warning',
+                                                                                    'SUBMITED' => 'bg-success',
+                                                                                    'ASSIGNED' => 'bg-secondary',
+                                                                                    'SUBMISSION_ACCEPTED' =>
+                                                                                        'bg-success',
+                                                                                    'SUBMISSION_REJECTED' => 'bg-error',
+                                                                                ];
+                                                                                $statusLabel = [
+                                                                                    'PENDING' => 'En cours',
+                                                                                    'SUBMITED' => 'Terminée',
+                                                                                    'ASSIGNED' => 'Assignée',
+                                                                                    'SUBMISSION_ACCEPTED' =>
+                                                                                        'Résultat validé',
+                                                                                    'SUBMISSION_REJECTED' =>
+                                                                                        'Résultat rejeté',
+                                                                                ];
+                                                                                $statusClass =
+                                                                                    $statusClasses[
+                                                                                        $assignment->status
+                                                                                    ] ?? 'bg-secondary';
+                                                                                $statusLabel =
+                                                                                    $statusLabel[$assignment->status] ??
+                                                                                    'Inconnu';
+                                                                            @endphp
 
-                                                                        <span class="badge {{ $statusClass }}">
-                                                                            {{ $statusLabel }}
-                                                                        </span>
-                                                                    </td>
+                                                                            <span class="badge {{ $statusClass }}">
+                                                                                {{ $statusLabel }}
+                                                                            </span>
+                                                                        </td>
 
-                                                                    <!-- Vues -->
-                                                                    <td>{{ $assignment->expected_views }}</td>
-                                                                    <td>{{ $assignment->vues }}</td>
+                                                                        <!-- Vues -->
+                                                                        <td>{{ $assignment->expected_views }}</td>
+                                                                        <td>{{ $assignment->vues }}</td>
 
-                                                                    <!-- Soumission -->
-                                                                    <td>
-                                                                        {{ $assignment->submission_date
-                                                                            ? \Carbon\Carbon::parse($assignment->submission_date)->format('d/m/Y H:i')
-                                                                            : 'Pas de soumissions' }}
-                                                                    </td>
+                                                                        <!-- Soumission -->
+                                                                        <td>
+                                                                            {{ $assignment->submission_date
+                                                                                ? \Carbon\Carbon::parse($assignment->submission_date)->format('d/m/Y H:i')
+                                                                                : 'Pas de soumissions' }}
+                                                                        </td>
 
-                                                                    <!-- Actions -->
-                                                                    <td>
-                                                                        <a href="{{ route('admin.show.result', $assignment->id) }}"
-                                                                            class="btn btn-sm btn-light">
-                                                                            <i class="fa fa-eye me-1"></i>Voir
-                                                                        </a>
-                                                                    </td>
+                                                                        <!-- Actions -->
+                                                                        <td>
+                                                                            <a href="{{ route('admin.show.result', $assignment->id) }}"
+                                                                                class="btn btn-sm btn-light">
+                                                                                <i class="fa fa-eye me-1"></i>Voir
+                                                                            </a>
+                                                                        </td>
 
-                                                                </tr>
+                                                                    </tr>
+                                                                @endif
                                                             @endforeach
                                                         </tbody>
 

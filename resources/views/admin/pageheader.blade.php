@@ -5,7 +5,7 @@
         @include('admin.logomenu')
         @include('admin.search')
 
-        <div class="nav-right col-xl-8 col-lg-12 col-auto pull-right right-header p-0">
+        <div class="nav-right col-xl-12 col-lg-12 col-auto pull-right right-header p-0">
             <ul class="nav-menus">
                 <li class="profile-nav onhover-dropdown pe-0 py-0">
                     <div class="d-flex align-items-center profile-media"><img class="b-r-25"
@@ -26,15 +26,18 @@
                                     <a href="{{ route('influencer.profile') }}"><i data-feather="user"></i><span>Mon
                                             Profil</span></a>
                                 @elseif($viewData['userprofile'] == 'ANNONCEUR')
-                                    <a href="/admin/client/profile"><i data-feather="user"></i><span>Mon
+                                    <a href="{{ route('admin.profile') }}"><i data-feather="user"></i><span>Mon
                                             Profil</span></a>
                                 @elseif($viewData['userprofile'] == 'ADMIN')
-                                    <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+                                    <a href="{{ route('admin.profile') }}"><i data-feather="user"></i><span>Mon
+                                            Profil</span></a>
                                 @else
-                                    <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+                                    <a href="{{ route('admin.profile') }}"><i data-feather="user"></i><span>Mon
+                                            Profil</span></a>
                                 @endif
                             @else
-                                <a href="/admin/profil"><i data-feather="user"></i><span>Mon Profil</span></a>
+                                <a href="{{ route('admin.profile') }}"><i data-feather="user"></i><span>Mon
+                                        Profil</span></a>
                             @endif
                         </li>
                         <li><a href="/admin/logout"> <i data-feather="log-in"></i><span>D&eacute;connexion</span></a>

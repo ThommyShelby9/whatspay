@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\WhatsAppController;
 use App\Http\Controllers\Web\Admin\DashboardAdminController;
 use App\Http\Controllers\Web\Admin\WhatsAppMessagingController;
 use App\Http\Controllers\Web\AssignmentController;
+use App\Http\Controllers\Web\Influencer\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -142,6 +143,9 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     */
     Route::get('/admin/task/submission/{id}', [AssignmentController::class, 'showResult'])->name('admin.show.result');
     Route::put('/admin/task/submission/{id}', [AssignmentController::class, 'validateResult'])->name('admin.update.result');
+
+    Route::get('/agent/profile', [ProfileController::class, 'index'])->name('admin.profile');
+    Route::put('/agent/profile', [ProfileController::class, 'update'])->name('admin.profile.update');
 });
 
 /*

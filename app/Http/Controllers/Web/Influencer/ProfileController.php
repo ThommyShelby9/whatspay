@@ -112,7 +112,7 @@ class ProfileController extends Controller
         $result = $this->userService->updateUser($userId, $userData);
 
         if ($result['success']) {
-            return redirect()->route('influencer.profile')
+            return redirect()->back()
                 ->with('type', 'success')
                 ->with('message', 'Profil mis à jour avec succès');
         } else {

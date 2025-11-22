@@ -109,11 +109,14 @@ class TrackingService
         $linkIds = Link::where('task_id', $taskId)->pluck('id')->toArray();
 
         if (empty($linkIds)) {
+            // Total views (assignments.vues)
+            $totalViews = (int) Assignment::where('task_id', $taskId)->sum('vues');
+
             return [
                 'total_clicks' => 0,
                 'unique_clicks' => 0,
                 'click_rate' => 0,
-                'total_views' => 0,
+                'total_views' => $totalViews,
                 'devices' => [
                     'desktop' => 0,
                     'mobile' => 0,

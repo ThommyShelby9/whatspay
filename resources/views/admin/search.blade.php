@@ -1,4 +1,4 @@
-<form class="col-sm-4 form-inline search-full d-none d-xl-block" action="#" method="get">
+{{-- <form class="col-sm-4 form-inline search-full d-none d-xl-block" action="#" method="get">
   <div class="form-group">
     <div class="Typeahead Typeahead--twitterUsers">
       <div class="u-posRelative">
@@ -9,4 +9,4 @@
       </div>
     </div>
   </div>
-</form>
+</form> --}}

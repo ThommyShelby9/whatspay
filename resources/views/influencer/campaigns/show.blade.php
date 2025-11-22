@@ -120,10 +120,23 @@
                         @if ($viewData['assignment']->status !== 'ASSIGNED')
                             <div class="mb-4">
                                 <h6 class="text-muted mb-1">Instructions</h6>
-                                <div class="alert alert-info">
-                                    <p class="mb-0">
-                                        {{ $viewData['assignment']->task->legend . ' ' . $viewData['assignment']->task->url ?? 'Aucune instruction spécifique pour cette campagne. Veuillez diffuser le contenu sur vos plateformes habituelles.' }}
+
+                                <div class=" d-flex justify-content-between align-items-center">
+                                    <p class="mb-0 flex-grow-1 alert alert-info" id="legend-text">
+                                        @if ($viewData['assignment']->task->legend)
+                                            {{ $viewData['assignment']->task->legend }}
+                                            {{ $viewData['assignment']->task->url }}
+                                        @else
+                                            Aucune instruction spécifique pour cette campagne. Veuillez diffuser le contenu
+                                            sur vos plateformes habituelles.
+                                        @endif
                                     </p>
+
+                                    @if ($viewData['assignment']->task->legend)
+                                        <button class="btn btn-sm btn-outline-primary ms-3" onclick="copyLegend()">
+                                            <i class="fa fa-clipboard"></i> Copier
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
 
@@ -426,6 +439,18 @@
                 console.log('SUBMITTED');
                 $('#applicationForm').submit();
             });
+
+            function copyLegend() {
+                const text = document.getElementById('legend-text').innerText.trim();
+
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        alert("Légende copiée !");
+                    })
+                    .catch(() => {
+                        alert("Impossible de copier.");
+                    });
+            }
         </script>
     @endpush
 @endsection

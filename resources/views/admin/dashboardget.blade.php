@@ -223,7 +223,8 @@
                                                     <a
                                                         href="{{ route('admin.task', ['id' => $task->id]) }}">{{ $task->name }}</a>
                                                 </td>
-                                                <td>{{ $task->client_name ?? 'N/A' }}</td>
+                                                <td>{{ $task->client->firstname . ' ' . $task->client->lastname ?? 'N/A' }}
+                                                </td>
                                                 <td>
                                                     @if ($task->status == 'PENDING')
                                                         <span class="badge bg-warning">En attente</span>

@@ -37,19 +37,26 @@
 
                         <h5 class="mb-1">{{ $viewData['userObject']->firstname ?? '' }}
                             {{ $viewData['userObject']->lastname ?? '' }}</h5>
-                        <p class="text-muted">Diffuseur de contenu</p>
+                        @if ($viewData['userObject']->profiles == 'DIFFUSEUR')
+                            <p class="text-muted">Diffuseur de contenu</p>
+                        @elseif ($viewData['userObject']->profiles == 'ANNONCEUR')
+                            <p class="text-muted">Annonceur</p>
+                        @else
+                            <p class="text-muted">Administrateur</p>
+                        @endif
 
-                        <div class="d-flex justify-content-center mt-3 mb-2">
-                            <div class="text-center px-3">
-                                <h5>{{ number_format($viewData['userObject']->vuesmoyen ?? 0) }}</h5>
-                                <p class="text-muted mb-0">Vues moyennes</p>
+                        @if ($viewData['userObject']->profiles == 'DIFFUSEUR')
+                            <div class="d-flex justify-content-center mt-3 mb-2">
+                                <div class="text-center px-3">
+                                    <h5>{{ number_format($viewData['userObject']->vuesmoyen ?? 0) }}</h5>
+                                    <p class="text-muted mb-0">Vues moyennes</p>
+                                </div>
+                                <div class="text-center px-3 border-start">
+                                    <h5>{{ $viewData['assignmentStats']['completed_count'] ?? 0 }}</h5>
+                                    <p class="text-muted mb-0">Campagnes</p>
+                                </div>
                             </div>
-                            <div class="text-center px-3 border-start">
-                                <h5>{{ $viewData['assignmentStats']['completed_count'] ?? 0 }}</h5>
-                                <p class="text-muted mb-0">Campagnes</p>
-                            </div>
-
-                        </div>
+                        @endif
                     </div>
                 </div>
 
@@ -189,17 +196,20 @@
                                             value="{{ $viewData['userObject']->phone ?? '' }}">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label class="form-label">Vues moyennes <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="vuesmoyen"
-                                            value="{{ $viewData['userObject']->vuesmoyen ?? 0 }}" required
-                                            min="0">
-                                        <div class="form-text">
-                                            Nombre moyen de vues par publication sur vos plateformes.
+                                @if ($viewData['userObject']->profiles == 'DIFFUSEUR')
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">Vues moyennes <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" name="vuesmoyen"
+                                                value="{{ $viewData['userObject']->vuesmoyen ?? 0 }}" required
+                                                min="0">
+                                            <div class="form-text">
+                                                Nombre moyen de vues par publication sur vos plateformes.
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                @endif
                             </div>
 
                             <div class="row mb-4">
@@ -240,32 +250,33 @@
                                 </div>
                             </div>
 
-
-                            <div class="row mb-4">
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label class="form-label">Liens des réseaux sociaux</label>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text"><i class="fab fa-instagram"></i></span>
-                                            <input type="text" class="form-control" name="instagram"
-                                                placeholder="Nom d'utilisateur Instagram"
-                                                value="{{ $viewData['user']->instagram ?? '' }}">
-                                        </div>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text"><i class="fab fa-tiktok"></i></span>
-                                            <input type="text" class="form-control" name="tiktok"
-                                                placeholder="Nom d'utilisateur TikTok"
-                                                value="{{ $viewData['user']->tiktok ?? '' }}">
-                                        </div>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text"><i class="fab fa-youtube"></i></span>
-                                            <input type="text" class="form-control" name="youtube"
-                                                placeholder="Chaîne YouTube"
-                                                value="{{ $viewData['user']->youtube ?? '' }}">
+                            @if ($viewData['userObject']->profiles == 'DIFFUSEUR')
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label">Liens des réseaux sociaux</label>
+                                            <div class="input-group mb-3">
+                                                <span class="input-group-text"><i class="fab fa-instagram"></i></span>
+                                                <input type="text" class="form-control" name="instagram"
+                                                    placeholder="Nom d'utilisateur Instagram"
+                                                    value="{{ $viewData['user']->instagram ?? '' }}">
+                                            </div>
+                                            <div class="input-group mb-3">
+                                                <span class="input-group-text"><i class="fab fa-tiktok"></i></span>
+                                                <input type="text" class="form-control" name="tiktok"
+                                                    placeholder="Nom d'utilisateur TikTok"
+                                                    value="{{ $viewData['user']->tiktok ?? '' }}">
+                                            </div>
+                                            <div class="input-group mb-3">
+                                                <span class="input-group-text"><i class="fab fa-youtube"></i></span>
+                                                <input type="text" class="form-control" name="youtube"
+                                                    placeholder="Chaîne YouTube"
+                                                    value="{{ $viewData['user']->youtube ?? '' }}">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endif
 
                             <div class="row">
                                 <div class="col-12 text-end">

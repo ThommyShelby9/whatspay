@@ -27,7 +27,7 @@
                         <div class="d-flex">
                             <div class="flex-grow-1">
                                 <h6 class="mb-2 text-uppercase text-muted">Missions actives</h6>
-                                <h4 class="mb-0">{{ $viewData['assignmentStats']['active'] ?? 0 }}</h4>
+                                <h4 class="mb-0">{{ $viewData['assignmentStats']['pending'] ?? 0 }}</h4>
                             </div>
                             <div class="avatar-sm rounded-circle bg-primary align-self-center mini-stat-icon">
                                 <span class="avatar-title rounded-circle bg-primary">

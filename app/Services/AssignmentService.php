@@ -294,8 +294,8 @@ class AssignmentService
         $gain = $assignment->gain ?? 0;
 
         // Créditer l’agent
-        /* $agent->wallet->credit($gain);
-        $agent->save(); */
+        $agent->wallet->credit($gain);
+        $agent->save();
 
         return [
             "success" => true,
@@ -333,7 +333,7 @@ class AssignmentService
         return [
             'total' => Assignment::count(),
             'pending' => Assignment::where('status', 'PENDING')->count(),
-            'completed' => Assignment::where('status', 'SUBMITED')->orWhere('status', 'SUBMISSION_ACCEPTED')->count(),
+            'completed' => Assignment::whereIn('status', ['SUBMITED', 'SUBMISSION_ACCEPTED'])->count(),
             'total_vues' => Assignment::sum('vues'),
             'total_gain' => Assignment::sum('gain'),
         ];
@@ -347,8 +347,7 @@ class AssignmentService
                 ->where('status', 'PENDING')
                 ->count(),
             'completed' => Assignment::where('agent_id', $agentId)
-                ->where('status', 'SUBMITED')
-                ->orWhere('status', 'SUBMISSION_ACCEPTED')
+                ->whereIn('status', ['SUBMITED', 'SUBMISSION_ACCEPTED'])
                 ->count(),
             'total_vues' => Assignment::where('agent_id', $agentId)
                 ->sum('vues'),

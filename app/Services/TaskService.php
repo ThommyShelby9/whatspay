@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Traits\Utils;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class TaskService
@@ -511,20 +512,27 @@ class TaskService
                 return $a['vues'] <=> $b['vues'];
             });
 
-            // Sélectionner les plus petits jusqu'à atteindre dailyRequired
-            $finalAgents = [];
-            $sum = 0;
+            // Essaye de trouver une combinaison optimale avec tolérance 20% (ajuste si besoin)
+            $maxOverfillPercent = 10.0; // tu peux paramétrer (ex: 10, 15, 20)
+            $finalAgents = $this->bestCombinationWithTolerance($agents, $dailyRequired, $maxOverfillPercent);
 
-            foreach ($agents as $a) {
-                if ($sum >= $dailyRequired) break;
-
-                $finalAgents[] = $a['model'];
-                $sum += $a['vues'];
-            }
-
-            if ($sum < $dailyRequired) {
+            if (!$finalAgents) {
                 DB::rollBack();
                 return ['success' => false, 'message' => 'Impossible d’atteindre les vues requises avec les diffuseurs disponibles.'];
+            }
+
+            // calcule la somme finale pour info/log
+            $finalSum = array_reduce($finalAgents, fn($c, $a) => $c + ($a->vuesmoyen ?? 0), 0);
+
+            // si tu veux, tu peux logger l'excédent
+            Log::info("Assignation: cible={$dailyRequired}, total_assigné={$finalSum}, agents=" . count($finalAgents));
+
+            if (!$finalAgents) {
+                DB::rollBack();
+                return [
+                    'success' => false,
+                    'message' => 'Impossible d’atteindre les vues requises avec les diffuseurs disponibles.'
+                ];
             }
 
             // Création des assignments
@@ -662,5 +670,131 @@ class TaskService
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Trouve la meilleure combinaison (somme minimale >= target)
+     */
+    private function bestCombination(array $agents, int $target)
+    {
+        $best = null;
+        $bestSum = PHP_INT_MAX;
+        $count = count($agents);
+        $totalComb = 1 << $count; // 2^N
+
+        for ($mask = 1; $mask < $totalComb; $mask++) {
+
+            $sum = 0;
+            $selected = [];
+
+            for ($i = 0; $i < $count; $i++) {
+                if ($mask & (1 << $i)) {
+                    $sum += $agents[$i]['vues'];
+                    $selected[] = $agents[$i]['model'];
+                }
+            }
+
+            if ($sum >= $target && $sum < $bestSum) {
+                $bestSum = $sum;
+                $best = $selected;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Trouve la meilleure combinaison d'agents (somme minimale >= $target),
+     * sinon la combinaison qui minimise |sum - target|.
+     *
+     * @param array $agents  tableau d'éléments ['model' => User, 'vues' => int]
+     * @param int   $target  nombre de vues requis
+     * @param float $maxOverfillPercent  pourcentage d'excédent acceptable (ex: 20 = 20%)
+     * @return array|null  liste des modèles sélectionnés ou null si aucun agent
+     */
+    private function bestCombinationWithTolerance(array $agents, int $target, float $maxOverfillPercent = 20.0)
+    {
+        $n = count($agents);
+        if ($n === 0) return null;
+
+        // somme totale possible
+        $totalSum = array_reduce($agents, fn($carry, $a) => $carry + ($a['vues'] ?? 0), 0);
+
+        // si la somme totale est inférieure à target, retourner tous les agents (ou on pourrait retourner null)
+        if ($totalSum <= $target) {
+            // on renvoie tous — l'assigner si tu veux quand même tenter
+            return array_map(fn($a) => $a['model'], $agents);
+        }
+
+        // DP par sommes -> bitmask (convient pour n <= ~60 mais en pratique n sera faible)
+        // dp = associative array sum => mask
+        $dp = [0 => 0]; // 0 sum -> mask 0
+        for ($i = 0; $i < $n; $i++) {
+            $v = (int) ($agents[$i]['vues'] ?? 0);
+            // on prend un snapshot des clés actuelles pour itérer
+            $currentSums = array_keys($dp);
+            foreach ($currentSums as $s) {
+                $new = $s + $v;
+                // si cette somme n'existe pas encore, on la crée
+                if (!isset($dp[$new])) {
+                    $dp[$new] = $dp[$s] | (1 << $i);
+                }
+            }
+        }
+
+        // Rechercher la meilleure somme >= target (minimiser l'excédent)
+        $bestSum = null;
+        foreach ($dp as $sum => $mask) {
+            if ($sum >= $target) {
+                if ($bestSum === null || ($sum - $target) < ($bestSum - $target)) {
+                    $bestSum = $sum;
+                }
+            }
+        }
+
+        // S'il y a une combinaison >= target, vérifier si l'excédent est raisonnable
+        if ($bestSum !== null) {
+            $overfill = $bestSum - $target;
+            $overfillPercent = ($overfill / max(1, $target)) * 100.0;
+
+            if ($overfillPercent <= $maxOverfillPercent) {
+                // récupérer le mask correspondant à bestSum
+                $mask = $dp[$bestSum];
+                return $this->agentsFromMask($agents, $mask);
+            }
+            // si excédent trop important, on tombera sur la sélection qui minimise |sum-target|
+        }
+
+        // Aucun bestSum acceptable ou overfill trop grand -> choisir la somme qui minimise |sum - target|
+        $closestSum = null;
+        $closestDiff = PHP_INT_MAX;
+        foreach ($dp as $sum => $mask) {
+            $diff = abs($sum - $target);
+            if ($diff < $closestDiff) {
+                $closestDiff = $diff;
+                $closestSum = $sum;
+            }
+        }
+
+        if ($closestSum !== null) {
+            $mask = $dp[$closestSum];
+            return $this->agentsFromMask($agents, $mask);
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper : retourne les modèles à partir d'un mask
+     */
+    private function agentsFromMask(array $agents, int $mask)
+    {
+        $res = [];
+        for ($i = 0, $n = count($agents); $i < $n; $i++) {
+            if ($mask & (1 << $i)) {
+                $res[] = $agents[$i]['model'];
+            }
+        }
+        return $res;
     }
 }
